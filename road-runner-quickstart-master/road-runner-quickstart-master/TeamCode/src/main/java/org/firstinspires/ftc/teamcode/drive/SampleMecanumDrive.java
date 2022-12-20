@@ -72,10 +72,10 @@ public class SampleMecanumDrive extends MecanumDrive {
 
     private TrajectoryFollower follower;
 
-    private DcMotorEx leftFront, leftRear, rightRear, rightFront;
+    private DcMotorEx leftFront, leftRear, rightRear, rightFront, lift;
     private List<DcMotorEx> motors;
 
-    private Servo intakeExtension;
+    private Servo intakeExtension, intakeExtensionRight, intakeWrist, intakeGrip1, intakeGrip2, outtakeWrist, outtakeClaw;
 
     private BNO055IMU imu;
     private VoltageSensor batteryVoltageSensor;
@@ -127,9 +127,20 @@ public class SampleMecanumDrive extends MecanumDrive {
         rightRear = hardwareMap.get(DcMotorEx.class, "rightRear");
         rightFront = hardwareMap.get(DcMotorEx.class, "rightFront");
 
+        lift = hardwareMap.get(DcMotorEx.class, "liftMotor");
+        lift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        lift.setTargetPosition(0);
+        lift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
         motors = Arrays.asList(leftFront, leftRear, rightRear, rightFront);
 
-//        intakeExtension = hardwareMap.get(Servo.class, "intakeExtension");
+        intakeExtension = hardwareMap.get(Servo.class, "intakeExtension");
+        intakeExtensionRight = hardwareMap.get(Servo.class, "intakeExtensionRight");
+        intakeWrist = hardwareMap.get(Servo.class, "intakeWrist");
+        intakeGrip1 = hardwareMap.get(Servo.class, "intakeGrip1");
+        intakeGrip2 = hardwareMap.get(Servo.class, "intakeGrip2");
+        outtakeWrist = hardwareMap.get(Servo.class, "outtakeWrist");
+        outtakeClaw = hardwareMap.get(Servo.class, "outtakeClaw");
 
         for (DcMotorEx motor : motors) {
             MotorConfigurationType motorConfigurationType = motor.getMotorType().clone();
@@ -159,6 +170,30 @@ public class SampleMecanumDrive extends MecanumDrive {
         // for instance, setLocalizer(new ThreeTrackingWheelLocalizer(...));
 
         trajectorySequenceRunner = new TrajectorySequenceRunner(follower, HEADING_PID);
+    }
+
+    public void setIntakeGrippersPos(double pos1, double pos2){
+        intakeGrip1.setPosition(pos1);
+        intakeGrip2.setPosition(pos2);
+    }
+
+    public void setIntakeWristPos(double pos){
+        intakeWrist.setPosition(pos);
+    }
+
+    public void setOuttakePos(double pos, double pos2){
+        outtakeWrist.setPosition(pos);
+        outtakeClaw.setPosition(pos2);
+    }
+
+    public void setIntakeExtension(double position, double pos2){
+        intakeExtension.setPosition(position);
+        intakeExtensionRight.setPosition(pos2);
+    }
+
+    public void setLiftTargetPosition(int position, double pow){
+        lift.setTargetPosition(position);
+        lift.setPower(pow);
     }
 
     public TrajectoryBuilder trajectoryBuilder(Pose2d startPose) {
