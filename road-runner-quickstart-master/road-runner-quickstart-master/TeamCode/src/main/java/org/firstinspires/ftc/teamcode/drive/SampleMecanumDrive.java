@@ -22,6 +22,7 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -72,10 +73,13 @@ public class SampleMecanumDrive extends MecanumDrive {
 
     private TrajectoryFollower follower;
 
-    private DcMotorEx leftFront, leftRear, rightRear, rightFront, lift;
+    private DcMotorEx leftFront, leftRear, rightRear, rightFront;
+    public DcMotorEx lift;
     private List<DcMotorEx> motors;
 
-    private Servo intakeExtension, intakeExtensionRight, intakeWrist, intakeGrip1, intakeGrip2, outtakeWrist, outtakeClaw;
+    public Servo intakeExtension, intakeExtensionRight, intakeWrist, intakeGrip1, intakeGrip2, outtakeWrist, outtakeClaw;
+
+    public DistanceSensor forwardPoleSensor;
 
     private BNO055IMU imu;
     private VoltageSensor batteryVoltageSensor;
@@ -120,7 +124,7 @@ public class SampleMecanumDrive extends MecanumDrive {
         // and the placement of the dot/orientation from https://docs.revrobotics.com/rev-control-system/control-system-overview/dimensions#imu-location
         //
         // For example, if +Y in this diagram faces downwards, you would use AxisDirection.NEG_Y.
-//        BNO055IMUUtil.remapZAxis(imu, AxisDirection.NEG_X);
+        BNO055IMUUtil.remapZAxis(imu, AxisDirection.NEG_X);
 
         leftFront = hardwareMap.get(DcMotorEx.class, "leftFront");
         leftRear = hardwareMap.get(DcMotorEx.class, "leftRear");
@@ -141,6 +145,8 @@ public class SampleMecanumDrive extends MecanumDrive {
         intakeGrip2 = hardwareMap.get(Servo.class, "intakeGrip2");
         outtakeWrist = hardwareMap.get(Servo.class, "outtakeWrist");
         outtakeClaw = hardwareMap.get(Servo.class, "outtakeClaw");
+
+        forwardPoleSensor = hardwareMap.get(DistanceSensor.class, "forwardPoleSensor");
 
         for (DcMotorEx motor : motors) {
             MotorConfigurationType motorConfigurationType = motor.getMotorType().clone();
@@ -172,29 +178,7 @@ public class SampleMecanumDrive extends MecanumDrive {
         trajectorySequenceRunner = new TrajectorySequenceRunner(follower, HEADING_PID);
     }
 
-    public void setIntakeGrippersPos(double pos1, double pos2){
-        intakeGrip1.setPosition(pos1);
-        intakeGrip2.setPosition(pos2);
-    }
 
-    public void setIntakeWristPos(double pos){
-        intakeWrist.setPosition(pos);
-    }
-
-    public void setOuttakePos(double pos, double pos2){
-        outtakeWrist.setPosition(pos);
-        outtakeClaw.setPosition(pos2);
-    }
-
-    public void setIntakeExtension(double position, double pos2){
-        intakeExtension.setPosition(position);
-        intakeExtensionRight.setPosition(pos2);
-    }
-
-    public void setLiftTargetPosition(int position, double pow){
-        lift.setTargetPosition(position);
-        lift.setPower(pow);
-    }
 
     public TrajectoryBuilder trajectoryBuilder(Pose2d startPose) {
         return new TrajectoryBuilder(startPose, VEL_CONSTRAINT, ACCEL_CONSTRAINT);
