@@ -57,8 +57,8 @@ import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kV;
  */
 @Config
 public class SampleMecanumDrive extends MecanumDrive {
-    public static PIDCoefficients TRANSLATIONAL_PID = new PIDCoefficients(0, 0, 0);
-    public static PIDCoefficients HEADING_PID = new PIDCoefficients(0, 0, 0);
+    public static PIDCoefficients TRANSLATIONAL_PID = new PIDCoefficients(4, 0, 0);
+    public static PIDCoefficients HEADING_PID = new PIDCoefficients(8, 0, 0);
 
     public static double LATERAL_MULTIPLIER = 1;
 
@@ -77,7 +77,7 @@ public class SampleMecanumDrive extends MecanumDrive {
     public DcMotorEx lift;
     private List<DcMotorEx> motors;
 
-    public Servo intakeExtension, intakeExtensionRight, intakeWrist, intakeGrip1, intakeGrip2, outtakeWrist, outtakeClaw;
+    public Servo intakeExtension, intakeExtensionRight, intakeWrist, intakeWristUpper, intakeGrip1, intakeGrip2, outtakeWrist, outtakeClaw;
 
     public DistanceSensor forwardPoleSensor;
 
@@ -141,6 +141,7 @@ public class SampleMecanumDrive extends MecanumDrive {
         intakeExtension = hardwareMap.get(Servo.class, "intakeExtension");
         intakeExtensionRight = hardwareMap.get(Servo.class, "intakeExtensionRight");
         intakeWrist = hardwareMap.get(Servo.class, "intakeWrist");
+        intakeWristUpper = hardwareMap.get(Servo.class, "intakeWristUpper");
         intakeGrip1 = hardwareMap.get(Servo.class, "intakeGrip1");
         intakeGrip2 = hardwareMap.get(Servo.class, "intakeGrip2");
         outtakeWrist = hardwareMap.get(Servo.class, "outtakeWrist");
@@ -174,6 +175,7 @@ public class SampleMecanumDrive extends MecanumDrive {
 
         // TODO: if desired, use setLocalizer() to change the localization method
         // for instance, setLocalizer(new ThreeTrackingWheelLocalizer(...));
+        setLocalizer(new TwoWheelTrackingLocalizer(hardwareMap, this));
 
         trajectorySequenceRunner = new TrajectorySequenceRunner(follower, HEADING_PID);
     }

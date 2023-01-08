@@ -17,8 +17,8 @@ public class ViolaStandardSymbiote {
     private double outtakeWristInPos = 1;
 
     //Outtake Claw
-    private double outtakeClawOpenPos = 1;
-    private double outtakeClawClosedPos = 0;
+    private double outtakeClawOpenPos = .8;
+    private double outtakeClawClosedPos = .2;
 
     //Timers
     ElapsedTime clock1 = new ElapsedTime();
@@ -38,7 +38,18 @@ public class ViolaStandardSymbiote {
         drive = driveTemp; //Grab the drive variable
         setLiftTargetPosition(0, 1); //Send the lift to default position
         setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
+        setIntakeWristUpperPos(0);
+//        setIntakeExtension(2);
     }
+
+//    public void test(){
+////        setIntakeWristUpperPos(0);
+////        setIntakeExtension(2);
+////
+////        setIntakeWristPos(2);
+////        setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
+//        setIntakeGrippersPos(2);
+//    }
 
     public void updateViolaSymbiote(){
 
@@ -58,7 +69,7 @@ public class ViolaStandardSymbiote {
                 if(wasClockReset && clock1.milliseconds() > 200) { //Wait for a bit
                     setIntakeExtension(1); //Extend the intake
                     setIntakeWristPos(0);//Lower the wrist
-                    setIntakeGrippersPos(2); //Open the grippers
+                    setIntakeGrippersPos(0); //Open the grippers
 
                 }
                 if(automaticMode && wasClockReset && clock1.milliseconds() > 800) {
@@ -66,7 +77,7 @@ public class ViolaStandardSymbiote {
                     wasClockReset = false;
                     shouldPrime = false;
                 }
-                else if (!automaticMode){
+                else if (!automaticMode && wasClockReset && clock1.milliseconds() > 800){
                     shouldPrime = false;
                     wasClockReset = false;
                     isBusy = false;
@@ -83,23 +94,23 @@ public class ViolaStandardSymbiote {
                 }
 
                 if(wasClockReset && clock1.milliseconds() < 400){
-                    setIntakeGrippersPos(0); //close the gripper
+                    setIntakeGrippersPos(2); //close the gripper
                 }
-                if (wasClockReset && clock1.milliseconds() > 500 && clock1.milliseconds() < 550) {
+                if (wasClockReset && clock1.milliseconds() > 500 && clock1.milliseconds() < 950) {
                     setIntakeWristPos(1);//Mid point
-                    setIntakeExtension(0); //Pull back the intake
+                    setIntakeExtension(2); //Pull back the intake
                 }
-                else if (wasClockReset && clock1.milliseconds() > 1000 && clock1.milliseconds() < 1050) {
+                else if (wasClockReset && clock1.milliseconds() > 1000 && clock1.milliseconds() < 1200) {
                     setIntakeWristPos(2); //Pull the wrist up
                 }
-                else if (wasClockReset && clock1.milliseconds() > 1500 && clock1.milliseconds() < 1550) {
-                    setIntakeGrippersPos(2); //Open the grippers
+                else if (wasClockReset && clock1.milliseconds() > 1500 && clock1.milliseconds() < 1700) {
+                    setIntakeGrippersPos(0); //Open the grippers
                 }
-                else if (wasClockReset && clock1.milliseconds() > 2000 && clock1.milliseconds() < 2050) {
+                else if (wasClockReset && clock1.milliseconds() > 2000 && clock1.milliseconds() < 2200) {
                     setLiftTargetPosition(3, 1); //Lift up the lift
                 }
-                else if (wasClockReset && clock1.milliseconds() > 2500 && clock1.milliseconds() < 2550) {
-                    setIntakeGrippersPos(0); //close the gripper
+                else if (wasClockReset && clock1.milliseconds() > 2500 && clock1.milliseconds() < 2700) {
+                    setIntakeGrippersPos(2); //close the gripper
                     setOuttakePos(outtakeWristInPos, outtakeClawClosedPos);
                     setIntakeWristPos(1);//Wrist mid point
                 }
@@ -109,7 +120,7 @@ public class ViolaStandardSymbiote {
                     wasClockReset = false;
                     shouldGrab = false;
                 }
-                else if (!automaticMode){
+                else if (!automaticMode && wasClockReset && clock1.milliseconds() > 3000){
                     shouldGrab = false;
                     wasClockReset = false;
                     isBusy = false;
@@ -133,7 +144,7 @@ public class ViolaStandardSymbiote {
                     shouldDeliver = true;
                     wasClockReset = false;
                 }
-                else if (!automaticMode){
+                else if (!automaticMode && wasClockReset && clock1.milliseconds() > 400){
                     shouldPrepareDelivery = false;
                     wasClockReset = false;
                     isBusy = false;
@@ -166,7 +177,7 @@ public class ViolaStandardSymbiote {
                     shouldDeliver = false;
                     isBusy = false;
                 }
-                else if (!automaticMode){
+                else if (!automaticMode && wasClockReset && clock1.milliseconds() > 1200){
                     wasClockReset = false;
                     shouldDeliver = false;
                     isBusy = false;
@@ -177,14 +188,85 @@ public class ViolaStandardSymbiote {
                 setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
                 setIntakeExtension(0); //Pull back the intake
                 setIntakeWristPos(1);
-                setIntakeGrippersPos(2);
+                setIntakeGrippersPos(0);
                 shouldRest = false;
             }
 
     }
 
+    public void updateAutonomousViolaSymbiote(int stage){
+
+        if(stage == 1){
+
+            setIntakeExtension(1); //Extend the intake
+            setIntakeWristPos(0);//Lower the wrist
+            setIntakeGrippersPos(0); //Open the grippers
+
+            wait(800);
+
+            setIntakeGrippersPos(2); //close the gripper
+
+            wait(400);
+
+            setIntakeWristPos(1);//Mid point
+            setIntakeExtension(2); //Pull back the intake
+
+            wait(100);
+
+            setIntakeWristPos(2); //Pull the wrist up
+
+            wait(500);
+
+            setIntakeGrippersPos(0); //Open the grippers
+
+            wait(500);
+
+            setLiftTargetPosition(3, 1); //Lift up the lift
+
+            while(drive.lift.getTargetPosition() < (4600 - liftRestPosition)){}
+
+            setIntakeGrippersPos(2); //close the gripper
+            setOuttakePos(outtakeWristInPos, outtakeClawClosedPos);
+            setIntakeWristPos(1); //Wrist mid point
+
+            wait(700);
+
+
+        }
+        else if (stage == 2 || stage == 3){
+
+            if(stage == 3) {
+                setLiftTargetPosition(3, 1); //Lift up the lift
+
+                while(drive.lift.getTargetPosition() < (4650 - liftRestPosition)){}
+            }
+
+            setOuttakePos(outtakeWristOutPos, outtakeClawOpenPos);
+
+            wait(500);
+
+            setLiftTargetPosition(0, 1); //Return the lift to rest position
+            setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
+
+        }
+        else if(shouldRest){
+            setLiftTargetPosition(0, 1); //Return the lift to rest position
+            setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
+            setIntakeExtension(0); //Pull back the intake
+            setIntakeWristPos(1);
+            setIntakeGrippersPos(0);
+            shouldRest = false;
+        }
+
+    }
+
     public boolean isBusy(){
         return isBusy;
+    }
+
+    public void wait(int time){
+        clock1.reset();
+        while(clock1.milliseconds() < time){}
     }
 
     public void sendStatusRequest(int status){
@@ -214,80 +296,42 @@ public class ViolaStandardSymbiote {
         automaticMode = mode;
     }
 
+    //0 = rest
+    //1 = Level 1
+    //2 = Level 2
+    //3 = Level 3
+    //4 = Level 4
+    public void setIntakeWristUpperPos(int position){
+        switch(position){
+            case 0:
+                drive.intakeWristUpper.setPosition(1);
+                break;
+            case 1:
+                drive.intakeWristUpper.setPosition(.96);
+                break;
+            case 2:
+                drive.intakeWristUpper.setPosition(.94);
+                break;
+            case 3:
+                drive.intakeWristUpper.setPosition(.93);
+                break;
+            case 4:
+                drive.intakeWristUpper.setPosition(.9);
+                break;
+            case 5:
+                drive.intakeWristUpper.setPosition(.87);
+                break;
+        }
+    }
 
-
-//    public void primeIntake(){
-//        setIntakeGrippersPos(0); //close the gripper
-//        clock1.reset();
-//        while (clock1.milliseconds() < 400) {}
-//        setIntakeExtension(1); //Extend the intake
-//        setIntakeWristPos(0);//Lower the wrist
-//        setIntakeGrippersPos(2); //Open the grippers
-//    }
-//
-//    public void grabAndPrep(){
-//        setIntakeGrippersPos(0); //close the gripper
-//        clock1.reset(); //Reset the timer
-//        while(clock1.milliseconds() < 500){
-//        }
-//        setIntakeWristPos(1);//Mid point
-//        setIntakeExtension(0); //Pull back the intake
-//        clock1.reset();
-//        while(clock1.milliseconds() < 500){
-//        }
-//        setIntakeWristPos(2); //Pull the wrist up
-//        clock1.reset();
-//        while(clock1.milliseconds() < 500) {
-//        }
-//        setIntakeGrippersPos(2); //Open the grippers
-//
-//        clock1.reset();
-//        while(clock1.milliseconds() < 400){
-//        }
-//        setLiftTargetPosition(3, 1); //Lift up the lift
-//        clock1.reset();
-//        while(clock1.milliseconds() < 200){
-//        }
-//        setIntakeGrippersPos(0); //close the gripper
-//        setOuttakePos(outtakeWristInPos, outtakeClawClosedPos);
-//        setIntakeWristPos(1);//Wrist mid point
-//
-//    }
-//
-//    public void lesserDelivery(){
-//        setOuttakePos(outtakeWristOutPos, outtakeClawClosedPos);
-//    }
-//
-//    public void deliver(){
-//
-//        setOuttakePos(outtakeWristOutPos, outtakeClawOpenPos);
-//
-//
-//
-//        clock1.reset();
-//        while(clock1.milliseconds() < 1000){        }
-//
-//        setLiftTargetPosition(0, 1); //Return the lift to rest position
-//
-//        setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
-//    }
-//
-//    public void restMode(){
-//        setLiftTargetPosition(0, 1); //Return the lift to rest position
-//        setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
-//        setIntakeExtension(0); //Pull back the intake
-//        setIntakeWristPos(1);
-//        setIntakeGrippersPos(2);
-//    }
-
-    //0 = closed
+    //0 = open
     //1 = mid
-    //2 = open
+    //2 = closed
     public void setIntakeGrippersPos(int position){
         switch(position){
             case 0:
-                drive.intakeGrip1.setPosition(.5);
-                drive.intakeGrip2.setPosition(.5);
+                drive.intakeGrip1.setPosition(.8);
+                drive.intakeGrip2.setPosition(.3);
                 break;
             case 1:
                 //Todo: Find a mid position. Low importance
@@ -295,26 +339,45 @@ public class ViolaStandardSymbiote {
                 drive.intakeGrip2.setPosition(.5);
                 break;
             case 2:
-                drive.intakeGrip1.setPosition(-.9);
-                drive.intakeGrip2.setPosition(.9);
+                drive.intakeGrip1.setPosition(.55);
+                drive.intakeGrip2.setPosition(.45);
                 break;
         }
-
     }
 
     //0 = out
     //1 = mid
     //2 = in
+    //3 = Level 1
+    //4 = Level 2
+    //5 = Level 3
+    //6 = Level 4
+    //7 = Level 5
     public void setIntakeWristPos(int position){
         switch(position){
             case 0:
-                drive.intakeWrist.setPosition(.7);
+                drive.intakeWrist.setPosition(.65);//.65
                 break;
             case 1:
-                drive.intakeWrist.setPosition(.4);
+                drive.intakeWrist.setPosition(.4);//.4
                 break;
             case 2:
-                drive.intakeWrist.setPosition(.15);
+                drive.intakeWrist.setPosition(0);//0
+                break;
+            case 3:
+                drive.intakeWrist.setPosition(.65);
+                break;
+            case 4:
+                drive.intakeWrist.setPosition(.6);
+                break;
+            case 5:
+                drive.intakeWrist.setPosition(.56);
+                break;
+            case 6:
+                drive.intakeWrist.setPosition(.52);
+                break;
+            case 7:
+                drive.intakeWrist.setPosition(.49);
                 break;
         }
     }
@@ -327,16 +390,20 @@ public class ViolaStandardSymbiote {
 
     //0 = retracted
     //1 = extended
+    //2 = delivery
     public void setIntakeExtension(int position){
         switch (position){
             case 0:
-                drive.intakeExtension.setPosition(.8);
-                drive.intakeExtensionRight.setPosition(.2);
+                drive.intakeExtension.setPosition(.7);
+                drive.intakeExtensionRight.setPosition(.3);
                 break;
             case 1:
                 drive.intakeExtension.setPosition(1);
                 drive.intakeExtensionRight.setPosition(0);
                 break;
+            case 2:
+                drive.intakeExtension.setPosition(.82);
+                drive.intakeExtensionRight.setPosition(.18);
         }
     }
 
@@ -361,7 +428,7 @@ public class ViolaStandardSymbiote {
                 drive.lift.setTargetPosition(3000 - liftRestPosition);
                 break;
             case 3:
-                drive.lift.setTargetPosition(4700 - liftRestPosition);
+                drive.lift.setTargetPosition(4500 - liftRestPosition);
                 break;
         }
     }
