@@ -29,24 +29,27 @@ public class Philharmonic extends LinearOpMode {
         symbiote.setup(drive);
         symbiote.setAutomaticMode(true);
 
-        Pose2d startPose = new Pose2d(40, 70, Math.toRadians(-90));
+        Pose2d startPose = new Pose2d(35, 60, Math.toRadians(-90));
         drive.setPoseEstimate(startPose);
 
         //Generate trajectories for Blue Left
         Trajectory traj1BlueLeft = drive.trajectoryBuilder(startPose)
-                .lineToLinearHeading(new Pose2d(40, 10, Math.toRadians(10)))
+                .lineToLinearHeading(new Pose2d(35, 5, Math.toRadians(10)))
+
+
+
                 .build();
 
-        Trajectory traj2BlueLeft1 = drive.trajectoryBuilder(traj1BlueLeft.end())
-                .lineToLinearHeading(new Pose2d(40, 20, Math.toRadians(10)))
+        Trajectory traj1BlueLeft1 = drive.trajectoryBuilder(traj1BlueLeft.end())
+                .lineToLinearHeading(new Pose2d(35, 10, Math.toRadians(10)))
                 .build();
 
-        Trajectory traj2BlueLeft2 = drive.trajectoryBuilder(traj2BlueLeft1.end())
-                .lineToLinearHeading(new Pose2d(-40, 20, Math.toRadians(-190)))
+        Trajectory traj1BlueLeft2 = drive.trajectoryBuilder(traj1BlueLeft1.end())
+                .lineToLinearHeading(new Pose2d(-35, 10, Math.toRadians(-190)))
                 .build();
 
-        Trajectory traj2BlueLeft3 = drive.trajectoryBuilder(traj2BlueLeft2.end())
-                .lineToLinearHeading(new Pose2d(-40, 10, Math.toRadians(-190)))
+        Trajectory traj1BlueLeft3 = drive.trajectoryBuilder(traj1BlueLeft2.end())
+                .lineToLinearHeading(new Pose2d(-35, 15, Math.toRadians(-190)))
                 .build();
 
         telemetry.addData("Waiting for Start", "");
@@ -56,13 +59,25 @@ public class Philharmonic extends LinearOpMode {
 
         drive.followTrajectory(traj1BlueLeft);
 
-        symbiote.updateAutonomousViolaSymbiote(3);
-        symbiote.updateAutonomousViolaSymbiote(1);
-        symbiote.updateAutonomousViolaSymbiote(2);
+        symbiote.updateAutonomousViolaSymbiote(3, 1); //Deliver the preload
 
-        drive.followTrajectory(traj2BlueLeft1);
-        drive.followTrajectory(traj2BlueLeft2);
-        drive.followTrajectory(traj2BlueLeft3);
+        symbiote.updateAutonomousViolaSymbiote(1, 4);
+        symbiote.updateAutonomousViolaSymbiote(2, 4);
+
+        symbiote.updateAutonomousViolaSymbiote(1, 3);
+        symbiote.updateAutonomousViolaSymbiote(2, 3);
+
+        symbiote.updateAutonomousViolaSymbiote(1, 2);
+        symbiote.updateAutonomousViolaSymbiote(2, 2);
+
+        symbiote.updateAutonomousViolaSymbiote(1, 1);
+        symbiote.updateAutonomousViolaSymbiote(2, 1);
+
+        symbiote.updateAutonomousViolaSymbiote(4, 1); //Send all appendages to rest
+//
+        drive.followTrajectory(traj1BlueLeft1);
+        drive.followTrajectory(traj1BlueLeft2);
+//        drive.followTrajectory(traj1BlueLeft3);
 
     }
 }

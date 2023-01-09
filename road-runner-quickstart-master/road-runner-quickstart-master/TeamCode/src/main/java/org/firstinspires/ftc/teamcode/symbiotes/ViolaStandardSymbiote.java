@@ -36,10 +36,12 @@ public class ViolaStandardSymbiote {
 
     public void setup(SampleMecanumDrive driveTemp) {
         drive = driveTemp; //Grab the drive variable
-        setLiftTargetPosition(0, 1); //Send the lift to default position
+
+        setLiftTargetPosition(0, 1); //Return the lift to rest position
         setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
-        setIntakeWristUpperPos(0);
-//        setIntakeExtension(2);
+        setIntakeExtension(0); //Pull back the intake
+        setIntakeWristPos(1);
+        setIntakeGrippersPos(0);
     }
 
 //    public void test(){
@@ -61,12 +63,12 @@ public class ViolaStandardSymbiote {
                     clock1.reset();
                     wasClockReset = true;
                 }
-//
-//                if(wasClockReset && clock1.milliseconds() < 50){
-//                    setIntakeGrippersPos(0); //Close the gripper
-//                }
 
-                if(wasClockReset && clock1.milliseconds() > 200) { //Wait for a bit
+                if(wasClockReset && clock1.milliseconds() < 50 && clock1.milliseconds() < 100){
+                    setIntakeGrippersPos(0); //Close the gripper
+                }
+
+                if(wasClockReset && clock1.milliseconds() > 200 && clock1.milliseconds() < 500) { //Wait for a bit
                     setIntakeExtension(1); //Extend the intake
                     setIntakeWristPos(0);//Lower the wrist
                     setIntakeGrippersPos(0); //Open the grippers
@@ -194,12 +196,13 @@ public class ViolaStandardSymbiote {
 
     }
 
-    public void updateAutonomousViolaSymbiote(int stage){
+    public void updateAutonomousViolaSymbiote(int stage, int height){
 
         if(stage == 1){
 
             setIntakeExtension(1); //Extend the intake
-            setIntakeWristPos(0);//Lower the wrist
+            setIntakeWristPos(height+2);//Lower the wrist
+            setIntakeWristUpperPos(height); //Angle the upper wrist
             setIntakeGrippersPos(0); //Open the grippers
 
             wait(800);
@@ -209,6 +212,7 @@ public class ViolaStandardSymbiote {
             wait(400);
 
             setIntakeWristPos(1);//Mid point
+            setIntakeWristUpperPos(0); // Return the upper wrist to default
             setIntakeExtension(2); //Pull back the intake
 
             wait(100);
@@ -223,7 +227,9 @@ public class ViolaStandardSymbiote {
 
             setLiftTargetPosition(3, 1); //Lift up the lift
 
-            while(drive.lift.getTargetPosition() < (4600 - liftRestPosition)){}
+            wait(1500);
+
+//            while(drive.lift.getTargetPosition() < (4500 - liftRestPosition)){drive.update();}
 
             setIntakeGrippersPos(2); //close the gripper
             setOuttakePos(outtakeWristInPos, outtakeClawClosedPos);
@@ -238,7 +244,9 @@ public class ViolaStandardSymbiote {
             if(stage == 3) {
                 setLiftTargetPosition(3, 1); //Lift up the lift
 
-                while(drive.lift.getTargetPosition() < (4650 - liftRestPosition)){}
+//                while(drive.lift.getTargetPosition() <= (4500 - liftRestPosition)){drive.update();}
+
+                wait(1500);
             }
 
             setOuttakePos(outtakeWristOutPos, outtakeClawOpenPos);
@@ -249,7 +257,7 @@ public class ViolaStandardSymbiote {
             setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
 
         }
-        else if(shouldRest){
+        else if(stage == 4){
             setLiftTargetPosition(0, 1); //Return the lift to rest position
             setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
             setIntakeExtension(0); //Pull back the intake
