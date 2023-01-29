@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.symbiotes;
+package org.firstinspires.ftc.teamcode.symbiotes.vision.deprecated;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 

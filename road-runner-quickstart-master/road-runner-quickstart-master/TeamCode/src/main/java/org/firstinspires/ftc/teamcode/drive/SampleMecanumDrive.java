@@ -19,6 +19,7 @@ import com.acmerobotics.roadrunner.trajectory.constraints.TrajectoryAcceleration
 import com.acmerobotics.roadrunner.trajectory.constraints.TrajectoryVelocityConstraint;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -74,12 +75,14 @@ public class SampleMecanumDrive extends MecanumDrive {
     private TrajectoryFollower follower;
 
     private DcMotorEx leftFront, leftRear, rightRear, rightFront;
-    public DcMotorEx lift;
+    public DcMotorEx lift, intakeSlide;
     private List<DcMotorEx> motors;
 
-    public Servo intakeExtension, intakeExtensionRight, intakeWrist, intakeWristUpper, intakeGrip1, intakeGrip2, outtakeWrist, outtakeClaw;
+    public Servo intakeWrist, intakeWristUpper, intakeGrip1, intakeGrip2, outtakeWrist, outtakeClaw;
 
-    public DistanceSensor forwardPoleSensor;
+    public RevBlinkinLedDriver blinkIn, blinkInRear;
+
+    public DistanceSensor forwardSensor;
 
     private BNO055IMU imu;
     private VoltageSensor batteryVoltageSensor;
@@ -136,18 +139,25 @@ public class SampleMecanumDrive extends MecanumDrive {
         lift.setTargetPosition(0);
         lift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
+
+
+        intakeSlide = hardwareMap.get(DcMotorEx.class, "intakeSlides");
+        intakeSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        intakeSlide.setTargetPosition(0);
+        intakeSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
         motors = Arrays.asList(leftFront, leftRear, rightRear, rightFront);
 
-        intakeExtension = hardwareMap.get(Servo.class, "intakeExtension");
-        intakeExtensionRight = hardwareMap.get(Servo.class, "intakeExtensionRight");
         intakeWrist = hardwareMap.get(Servo.class, "intakeWrist");
         intakeWristUpper = hardwareMap.get(Servo.class, "intakeWristUpper");
         intakeGrip1 = hardwareMap.get(Servo.class, "intakeGrip1");
         intakeGrip2 = hardwareMap.get(Servo.class, "intakeGrip2");
         outtakeWrist = hardwareMap.get(Servo.class, "outtakeWrist");
         outtakeClaw = hardwareMap.get(Servo.class, "outtakeClaw");
+        blinkIn = hardwareMap.get(RevBlinkinLedDriver.class, "blinkIn");
+        blinkInRear = hardwareMap.get(RevBlinkinLedDriver.class, "blinkInRear");
 
-        forwardPoleSensor = hardwareMap.get(DistanceSensor.class, "forwardPoleSensor");
+        forwardSensor = hardwareMap.get(DistanceSensor.class, "forwardSensor");
 
         for (DcMotorEx motor : motors) {
             MotorConfigurationType motorConfigurationType = motor.getMotorType().clone();

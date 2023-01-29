@@ -1,30 +1,34 @@
 package org.firstinspires.ftc.teamcode.tele;
 
 import com.acmerobotics.roadrunner.geometry.Pose2d;
-//import com.arcrobotics.ftclib.gamepad.GamepadEx;
-//import com.arcrobotics.ftclib.gamepad.GamepadKeys;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
+import org.firstinspires.ftc.teamcode.symbiotes.OboeStandardSymbiote;
 import org.firstinspires.ftc.teamcode.symbiotes.ViolaStandardSymbiote;
 import org.firstinspires.ftc.teamcode.symbiotes.vision.CombinedDetectorHandler;
+import org.firstinspires.ftc.teamcode.symbiotes.vision.utility.TrackType;
+import org.firstinspires.ftc.teamcode.util.Storage;
 
 @TeleOp(group = "drive")
-@Disabled
-public class Hydra extends LinearOpMode {
+public class Symphony extends LinearOpMode {
 
+    int testMode = 0;
+
+    boolean automaticMode = false, automaticDriveMode = false;
+    boolean switchCase = false;
+    double coneOffset;
+    double poleOffset;
+    double errorToZeroHeading;
     boolean switchSys = false;
-
-    boolean automaticMode = false;
-
-    double targetHeading;
 
     //Timers
     ElapsedTime clock1 = new ElapsedTime();
+
 
 
     @Override
@@ -32,15 +36,23 @@ public class Hydra extends LinearOpMode {
 
         //Set up the drive train
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
-
         drive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        drive.setPoseEstimate(Storage.getCurrentPos());
+
+        CombinedDetectorHandler combinedDetectorHandler = new CombinedDetectorHandler(hardwareMap, "webcam 1", "webcam 2","webcam 3");
+        combinedDetectorHandler.init();
+        combinedDetectorHandler.setTrackingTypes(TrackType.CONE, TrackType.POLE, TrackType.POLE);
 
         //Set up the symbiote
-        ViolaStandardSymbiote symbiote = new ViolaStandardSymbiote();
+        OboeStandardSymbiote symbiote = new OboeStandardSymbiote();
 
         symbiote.setup(drive);
 
         double speedMod = .5;
+
+        drive.blinkIn.setPattern(RevBlinkinLedDriver.BlinkinPattern.YELLOW);
+        drive.blinkInRear.setPattern(RevBlinkinLedDriver.BlinkinPattern.YELLOW);
+        symbiote.setLiftTargetHeight(3);
 
         waitForStart();
 
@@ -53,6 +65,7 @@ public class Hydra extends LinearOpMode {
             symbiote.updateViolaSymbiote();
 
 
+
             /** Driver Controls */
             if(gamepad1.x)
                 speedMod = 1;
@@ -63,6 +76,9 @@ public class Hydra extends LinearOpMode {
             else if (gamepad1.y)
                 speedMod = .25;
 
+            //Manual
+            if(!automaticDriveMode)
+            {
                 drive.setWeightedDrivePower(
                         new Pose2d(
                                 -gamepad1.left_stick_y * speedMod,
@@ -71,9 +87,39 @@ public class Hydra extends LinearOpMode {
 
                         )
                 );
+            }
 
 
+            //Automatic lift Controls
+            if(automaticDriveMode)
+            {
+                coneOffset = combinedDetectorHandler.getForwardConeOffset(1) * -.005;
+                poleOffset = combinedDetectorHandler.getPoleParallax() * -.005;
+                if(testMode == 0){
+                    drive.setWeightedDrivePower(
+                            new Pose2d(
+                                    0,
+                                    0,
+                                    -drive.getRawExternalHeading()
 
+                            )
+                    );
+                }
+                else if(testMode == 1){
+
+                    drive.setWeightedDrivePower(
+                            new Pose2d(
+                                    0,
+                                    0,
+                                    coneOffset > -.1 && coneOffset < .1 ? 0 : coneOffset
+
+                            )
+                    );
+                }
+            }
+
+
+            /** Operator Controls */
             //Automatic lift Controls
             if(automaticMode)
             {
@@ -88,16 +134,16 @@ public class Hydra extends LinearOpMode {
                 else if (gamepad2.dpad_right && !symbiote.isBusy())
                     symbiote.sendStatusRequest(1);
 
-                else if (gamepad2.dpad_down && switchSys && !symbiote.isBusy()){
+                else if (gamepad2.dpad_down && switchSys && !symbiote.isBusy() && clock1.milliseconds() > 500){
                     symbiote.sendStatusRequest(2);
                     switchSys = false;
                     clock1.reset();
                 }
 
-                else if (gamepad2.dpad_down && !switchSys && clock1.milliseconds() > 300 && !symbiote.isBusy()){
+                else if (gamepad2.dpad_down && !switchSys && clock1.milliseconds() > 500 && !symbiote.isBusy()){
                     symbiote.sendStatusRequest(3);
                     switchSys = true;
-//                    clock1.reset();
+                    clock1.reset();
                 }
 
                 else if(gamepad2.dpad_left && !symbiote.isBusy())
@@ -120,6 +166,9 @@ public class Hydra extends LinearOpMode {
 
 
             /** Telemetry */
+            telemetry.addData("Pole Parallax ", poleOffset);
+            telemetry.addData("Pow ", coneOffset);
+            telemetry.addData("front Cone ", combinedDetectorHandler.getForwardConeOffset(1));
             telemetry.addData("x", poseEstimate.getX());
             telemetry.addData("y", poseEstimate.getY());
             telemetry.addData("heading", poseEstimate.getHeading());
@@ -127,25 +176,18 @@ public class Hydra extends LinearOpMode {
             telemetry.update();
         }
     }
+
+    public boolean getStateChange(){
+        if(gamepad2.dpad_down != switchCase){
+            return true;
+        }
+        switchCase = gamepad2.dpad_down;
+        return false;
+    }
+
 }
 
+
+
 //********* Boneyard **********
-//            else if (driveAuto){
-//                errorToPole = vision.getPoleParallax()-90;
-//                heading = poseEstimate.getHeading();
-//                drive.setWeightedDrivePower(
-//                        new Pose2d(
-//                                0,
-//                                errorToPole > 100 ? errorToPole * -.002 : errorToPole * -.005,
-//                                (heading > targetHeading+5 || heading < targetHeading-5) ? (heading * -1) * .002 : 0
-//                        )
-//                );
-//            }
 
-
-//            if(gamepad1.dpad_down){
-//                driveAuto = true;
-//            }
-//            else if (gamepad1.dpad_up){
-//                driveAuto = false;
-//            }
