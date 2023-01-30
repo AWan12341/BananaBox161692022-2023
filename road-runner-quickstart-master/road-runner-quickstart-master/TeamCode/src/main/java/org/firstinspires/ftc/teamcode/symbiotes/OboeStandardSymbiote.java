@@ -16,11 +16,11 @@ public class OboeStandardSymbiote {
     private int liftHeight1Pos = 300, liftHeight2Pos = 600, liftHeight3Pos = 905;
     private int tempHeight = 905;
     private int liftTargetHeight = 3;
-    private double rampIncrement = .04, ramp = 1;
+    private double rampIncrement = .05, ramp = 1;
 
     //Outtake wrist
     private double outtakeWristOutPos = .2;
-    private double outtakeWristInPos = .82;
+    private double outtakeWristInPos = .86;
 
     //Outtake Claw
     private double outtakeClawOpenPos = .75;
@@ -47,6 +47,7 @@ public class OboeStandardSymbiote {
     boolean shouldPrime = false, shouldGrab = false, shouldPrepareDelivery = false, shouldDeliver = false, shouldRest = false;
     boolean isBusy = false;
     boolean flag = false;
+    public boolean readyFlag = false;
 
 
 
@@ -60,7 +61,8 @@ public class OboeStandardSymbiote {
         setIntakeGrippersPos(0);
         setIntakeWristUpperPos(0);
         rampDelay.reset();
-        
+
+        readyFlag = true;
     }
 
 
@@ -153,28 +155,32 @@ public class OboeStandardSymbiote {
 
                 if(wasClockReset && clock1.milliseconds() < 400){
                     setIntakeGrippersPos(2); //close the gripper
+                    setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
                 }
                 if (wasClockReset && clock1.milliseconds() > 500 && clock1.milliseconds() < 950) {
                     setIntakeWristPos(1);//Mid point
-                    if(rampDelay.milliseconds() > 20) {
-                        ramp -= rampIncrement;
-                        rampDelay.reset();
-                    }
-                    setIntakeExtension(2, ramp); //Pull back the intake
+//                    if(rampDelay.milliseconds() > 20) {
+//                        ramp -= rampIncrement;
+//                        rampDelay.reset();
+//                    }
+                    setIntakeExtension(0, .5); //Pull back the intake
                 }
                 else if (wasClockReset && clock1.milliseconds() > 1000 && clock1.milliseconds() < 1200) {
                     setIntakeWristPos(2); //Pull the wrist up
-                    ramp = 1;
+//                    ramp = 1;
                 }
-                else if (wasClockReset && clock1.milliseconds() > 1500 && clock1.milliseconds() < 1700) {
+                else if (wasClockReset && clock1.milliseconds() > 2000 && clock1.milliseconds() < 2100) {
                     setIntakeGrippersPos(3); //Open the grippers
-                }
-                else if (wasClockReset && clock1.milliseconds() > 2500 && clock1.milliseconds() < 2600) {
-                    setLiftTargetPosition(liftTargetHeight, 1); //Lift up the lift
+
                 }
                 else if (wasClockReset && clock1.milliseconds() > 2800 && clock1.milliseconds() < 2900) {
-                    setIntakeGrippersPos(2); //close the gripper
                     setOuttakePos(outtakeWristInPos, outtakeClawClosedPos);
+                    setIntakeExtension(3, 1);
+                    setLiftTargetPosition(liftTargetHeight, 1); //Lift up the lift
+                }
+                else if (wasClockReset && clock1.milliseconds() > 3200 && clock1.milliseconds() < 3300) {
+                    setIntakeGrippersPos(2); //close the gripper
+                    setOuttakePos(outtakeWristInPos, outtakeClawClosedPos); //Clamp the part
                     setIntakeWristPos(1);//Wrist mid point
                 }
 
@@ -199,15 +205,17 @@ public class OboeStandardSymbiote {
                     wasClockReset = true;
                 }
 
-                if(wasClockReset && clock1.milliseconds() < 40)
+                if(wasClockReset && clock1.milliseconds() < 40) {
                     setOuttakePos(outtakeWristOutPos, outtakeClawClosedPos);
+                    setIntakeGrippersPos(2); //close the gripper
+                }
 
 //                if(automaticMode && wasClockReset && clock1.milliseconds() > 400){
 //                    shouldPrepareDelivery = false;
 //                    shouldDeliver = true;
 //                    wasClockReset = false;
 //                }
-                else if (!automaticMode && wasClockReset && clock1.milliseconds() > 400){
+                if (!automaticMode && wasClockReset && clock1.milliseconds() > 400){
                     shouldPrepareDelivery = false;
                     wasClockReset = false;
                     isBusy = false;
@@ -226,9 +234,10 @@ public class OboeStandardSymbiote {
 
                 if(wasClockReset && clock1.milliseconds() < 400){
                     setOuttakePos(outtakeWristOutPos, outtakeClawOpenPos);
+                    setIntakeGrippersPos(2); //close the gripper
                 }
 
-                if(wasClockReset && clock1.milliseconds() > 1000){
+                if(wasClockReset && clock1.milliseconds() > 1000 && clock1.milliseconds() < 1100){
                     setLiftTargetPosition(0, .25); //Return the lift to rest position
 
                     setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
@@ -240,7 +249,7 @@ public class OboeStandardSymbiote {
 //                    shouldDeliver = false;
 //                    isBusy = false;
 //                }
-                else if (!automaticMode && wasClockReset && clock1.milliseconds() > 1200){
+                if (!automaticMode && wasClockReset && clock1.milliseconds() > 1200){
                     wasClockReset = false;
                     shouldDeliver = false;
                     isBusy = false;
@@ -249,7 +258,7 @@ public class OboeStandardSymbiote {
             else if(shouldRest){
                 setLiftTargetPosition(0, 1); //Return the lift to rest position
                 setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
-//                setIntakeExtension(0); //Pull back the intake
+                setIntakeExtension(0, .5); //Pull back the intake
                 setIntakeWristPos(1);
                 setIntakeGrippersPos(0);
                 shouldRest = false;
@@ -434,7 +443,7 @@ public class OboeStandardSymbiote {
                 drive.intakeGrip2.setPosition(.8);
                 break;
             case 2:
-                drive.intakeGrip1.setPosition(.32);
+                drive.intakeGrip1.setPosition(.33);
                 drive.intakeGrip2.setPosition(.75);
                 break;
             case 3:
@@ -458,10 +467,10 @@ public class OboeStandardSymbiote {
                 drive.intakeWrist.setPosition(.76);
                 break;
             case 1:
-                drive.intakeWrist.setPosition(.4);
+                drive.intakeWrist.setPosition(.5);
                 break;
             case 2:
-                drive.intakeWrist.setPosition(.1);//todo:test
+                drive.intakeWrist.setPosition(.15);//todo:test
                 break;
             case 3:
                 drive.intakeWrist.setPosition(.78);
@@ -503,19 +512,21 @@ public class OboeStandardSymbiote {
                 drive.intakeSlide.setTargetPosition(170);
                 break;
             case 2:
-                drive.intakeSlide.setTargetPosition(50); //TODO: tune
+                drive.intakeSlide.setTargetPosition(60); //TODO: tune
                 break;
-            case 4:
-                if(!flag) {
-                    drive.intakeSlide.setTargetPosition(80);
-                }
-                else if (flag){
-                    drive.intakeSlide.setTargetPosition((int)(drive.forwardSensor.getDistance(DistanceUnit.INCH) * 8.95));
-                }
-                if(drive.intakeSlide.getCurrentPosition() >= 80 && !flag){
-                    flag = true;
-                }
-                break;
+            case 3:
+                drive.intakeSlide.setTargetPosition(70);
+//            case 4:
+//                if(!flag) {
+//                    drive.intakeSlide.setTargetPosition(0);
+//                }
+//                else if (flag){
+//                    drive.intakeSlide.setTargetPosition((int)(drive.forwardSensor.getDistance(DistanceUnit.INCH) * 8.95));
+//                }
+//                if(drive.intakeSlide.getCurrentPosition() >= 0 && !flag){
+//                    flag = true;
+//                }
+//                break;
         }
     }
 
@@ -532,7 +543,7 @@ public class OboeStandardSymbiote {
         switch(level){
             case 0:
 //                drive.lift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-                drive.lift.setTargetPosition(150);
+                drive.lift.setTargetPosition(300);
                 break;
             case 1:
                 //Todo: Find actual junction height 1 height

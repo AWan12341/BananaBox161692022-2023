@@ -28,6 +28,7 @@ public class Symphony extends LinearOpMode {
 
     //Timers
     ElapsedTime clock1 = new ElapsedTime();
+    ElapsedTime matchTimer = new ElapsedTime();
 
 
 
@@ -55,6 +56,7 @@ public class Symphony extends LinearOpMode {
         symbiote.setLiftTargetHeight(3);
 
         waitForStart();
+        matchTimer.reset();
 
 
         while (!isStopRequested() && opModeIsActive()) {
@@ -63,6 +65,10 @@ public class Symphony extends LinearOpMode {
             drive.update();
             Pose2d poseEstimate = drive.getPoseEstimate();
             symbiote.updateViolaSymbiote();
+
+            if(matchTimer.seconds() > 89){
+                drive.blinkInRear.setPattern(RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_RED);
+            }
 
 
 
@@ -81,9 +87,9 @@ public class Symphony extends LinearOpMode {
             {
                 drive.setWeightedDrivePower(
                         new Pose2d(
-                                -gamepad1.left_stick_y * speedMod,
-                                -gamepad1.left_stick_x * speedMod,
-                                -gamepad1.right_stick_x * speedMod
+                                gamepad1.left_stick_y * speedMod,
+                                gamepad1.left_stick_x * speedMod,
+                                gamepad1.right_stick_x * speedMod
 
                         )
                 );
@@ -126,6 +132,16 @@ public class Symphony extends LinearOpMode {
                 symbiote.sendStatusRequest(0);
             }
 
+            if(gamepad2.a && gamepad2.b){
+                symbiote.setLiftTargetHeight(1);
+            }
+            else if(gamepad2.a && gamepad2.y){
+                symbiote.setLiftTargetHeight(2);
+            }
+            else if (gamepad2.a && gamepad2.x){
+                symbiote.setLiftTargetHeight(3);
+            }
+
             //Manual Lift Controls
             if(!automaticMode){
                 if(gamepad2.dpad_up && !symbiote.isBusy())
@@ -134,34 +150,49 @@ public class Symphony extends LinearOpMode {
                 else if (gamepad2.dpad_right && !symbiote.isBusy())
                     symbiote.sendStatusRequest(1);
 
-                else if (gamepad2.dpad_down && switchSys && !symbiote.isBusy() && clock1.milliseconds() > 500){
+                else if (gamepad2.left_bumper && !symbiote.isBusy()){
                     symbiote.sendStatusRequest(2);
-                    switchSys = false;
-                    clock1.reset();
+                }
+                else if (gamepad2.right_bumper && !symbiote.isBusy()){
+                    symbiote.sendStatusRequest(3);
                 }
 
-                else if (gamepad2.dpad_down && !switchSys && clock1.milliseconds() > 500 && !symbiote.isBusy()){
-                    symbiote.sendStatusRequest(3);
-                    switchSys = true;
-                    clock1.reset();
-                }
+//                else if (gamepad2.dpad_down && switchSys && !symbiote.isBusy() && clock1.milliseconds() > 500){
+//
+//                    switchSys = false;
+//                    clock1.reset();
+//                }
+//
+//                else if (gamepad2.dpad_down && !switchSys && clock1.milliseconds() > 500 && !symbiote.isBusy()){
+//
+//                    switchSys = true;
+//                    clock1.reset();
+//                }
 
                 else if(gamepad2.dpad_left && !symbiote.isBusy())
                     symbiote.sendStatusRequest(4);
+            }
+            if(gamepad2.x && gamepad1.x && symbiote.readyFlag){
+                drive.blinkInRear.setPattern(RevBlinkinLedDriver.BlinkinPattern.DARK_GREEN);
+                symbiote = new OboeStandardSymbiote();
+                symbiote.setup(drive);
+            }
+            if(symbiote.readyFlag){
+                drive.blinkInRear.setPattern(RevBlinkinLedDriver.BlinkinPattern.YELLOW);
             }
 
 
 
             /** Operator Controls */
             //Automatic Lift Controls/Overrides
-            if(gamepad2.a){
-                symbiote.setAutomaticMode(true);
-                automaticMode = true;
-            }
-            else if(gamepad2.b){
-                symbiote.setAutomaticMode(false);
-                automaticMode = false;
-            }
+//            if(gamepad2.a){
+//                symbiote.setAutomaticMode(true);
+//                automaticMode = true;
+//            }
+//            else if(gamepad2.b){
+//                symbiote.setAutomaticMode(false);
+//                automaticMode = false;
+//            }
 
 
 
