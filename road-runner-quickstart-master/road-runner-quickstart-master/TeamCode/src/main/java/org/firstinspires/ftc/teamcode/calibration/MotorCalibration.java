@@ -1,11 +1,13 @@
 package org.firstinspires.ftc.teamcode.calibration;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 @TeleOp
+//@Disabled
 public class MotorCalibration extends LinearOpMode {
 
     DcMotor motor;
@@ -13,7 +15,7 @@ public class MotorCalibration extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
 
-        motor = hardwareMap.get(DcMotor.class, "liftMotor");
+        motor = hardwareMap.get(DcMotor.class, "intakeSlides");
         motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motor.setPower(.5);
         motor.setTargetPosition(0);
@@ -36,6 +38,7 @@ public class MotorCalibration extends LinearOpMode {
             motor.setTargetPosition(val);
 
             telemetry.addData("Pos: ", motor.getCurrentPosition());
+            telemetry.addData("Val: ", val);
             telemetry.update();
         }
     }

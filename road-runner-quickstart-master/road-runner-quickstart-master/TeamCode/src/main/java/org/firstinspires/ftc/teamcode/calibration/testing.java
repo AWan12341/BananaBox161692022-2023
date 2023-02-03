@@ -1,12 +1,14 @@
 package org.firstinspires.ftc.teamcode.calibration;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.symbiotes.vision.CombinedDetectorHandler;
 import org.firstinspires.ftc.teamcode.symbiotes.vision.utility.TrackType;
 
 @Autonomous
+@Disabled
 public class testing extends LinearOpMode {
 
     @Override
