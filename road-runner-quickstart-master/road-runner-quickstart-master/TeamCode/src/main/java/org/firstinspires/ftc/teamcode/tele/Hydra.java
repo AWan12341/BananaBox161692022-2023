@@ -10,8 +10,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
-import org.firstinspires.ftc.teamcode.symbiotes.ViolaStandardSymbiote;
-import org.firstinspires.ftc.teamcode.symbiotes.vision.CombinedDetectorHandler;
+import org.firstinspires.ftc.teamcode.symbiotes.vision.deprecated.ViolaStandardSymbiote;
 
 @TeleOp(group = "drive")
 @Disabled

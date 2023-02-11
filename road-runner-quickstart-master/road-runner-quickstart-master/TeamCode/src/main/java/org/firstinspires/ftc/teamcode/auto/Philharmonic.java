@@ -10,9 +10,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
-import org.firstinspires.ftc.teamcode.symbiotes.ViolaStandardSymbiote;
-import org.firstinspires.ftc.teamcode.symbiotes.vision.CombinedDetectorHandler;
-import org.firstinspires.ftc.teamcode.symbiotes.vision.utility.TrackType;
+import org.firstinspires.ftc.teamcode.symbiotes.vision.deprecated.ViolaStandardSymbiote;
 import org.firstinspires.ftc.teamcode.util.Storage;
 import org.firstinspires.ftc.teamcode.util.enums.AllianceInfo;
 import org.firstinspires.ftc.teamcode.util.enums.StartPositions;

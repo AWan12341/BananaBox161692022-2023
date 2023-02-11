@@ -15,7 +15,7 @@ public class MotorCalibration extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
 
-        motor = hardwareMap.get(DcMotor.class, "intakeSlides");
+        motor = hardwareMap.get(DcMotor.class, "liftMotor");
         motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motor.setPower(.5);
         motor.setTargetPosition(0);

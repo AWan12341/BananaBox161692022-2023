@@ -10,7 +10,6 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 import org.firstinspires.ftc.teamcode.symbiotes.HarpsichordStandardSymbiote;
-import org.firstinspires.ftc.teamcode.symbiotes.OboeStandardSymbiote;
 import org.firstinspires.ftc.teamcode.symbiotes.vision.CombinedDetectorHandler;
 import org.firstinspires.ftc.teamcode.symbiotes.vision.utility.TrackType;
 import org.firstinspires.ftc.teamcode.util.Storage;
@@ -63,7 +62,7 @@ public class Orchestra extends LinearOpMode {
             /** Update all symbiotes and drivers */
             drive.update();
             Pose2d poseEstimate = drive.getPoseEstimate();
-            symbiote.updateViolaSymbiote();
+            symbiote.updateHarpsichordSymbiote();
 
 //            if(matchTimer.seconds() > 89){
 //                drive.blinkInRear.setPattern(RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_RED);
@@ -172,19 +171,24 @@ public class Orchestra extends LinearOpMode {
             /** Operator Controls */
             //Automatic Lift Controls/Overrides
             if(gamepad2.a){
-                symbiote.setAutomaticMode(true);
-                automaticMode = true;
+                symbiote.cyclingMode = true;
+//                symbiote.setAutomaticMode(true);
+//                automaticMode = true;
             }
             else if(gamepad2.b){
-                symbiote.setAutomaticMode(false);
-                automaticMode = false;
+                symbiote.cyclingMode = false;
+//                symbiote.setAutomaticMode(false);
+//                automaticMode = false;
             }
 
 
 
             /** Telemetry */
             telemetry.addData("Cone Distance ", drive.forwardSensor.getDistance(DistanceUnit.INCH));
+            telemetry.addData("Intake Slide Current Pos ", drive.intakeSlide.getCurrentPosition());
             telemetry.addData("Current Prime State ", symbiote.primeState);
+            telemetry.addData("Current Grab State ", symbiote.grabState);
+            telemetry.addData("Current Delivery State ", symbiote.deliveryState);
 //            telemetry.addData("Pole Parallax ", poleOffset);
 //            telemetry.addData("Pow ", coneOffset);
 //            telemetry.addData("front Cone ", combinedDetectorHandler.getForwardConeOffset(1));

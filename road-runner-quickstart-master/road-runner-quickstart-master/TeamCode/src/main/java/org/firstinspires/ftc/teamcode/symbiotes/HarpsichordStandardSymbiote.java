@@ -11,27 +11,28 @@ public class HarpsichordStandardSymbiote {
     private SampleMecanumDrive drive;
 
     //Slide positions
-    private int extendedPos = 370, retractedPos = 0, transferPos = 130, floatingTargetPos = 130;
-
+    private int extendedPos = 340, retractedPos = -10, transferPos = 130, floatingTargetPos = 130;//85
     //Lift positions
-    private int liftRestPosition = 300;
+    private int liftRestPosition = 100;
     private int liftHeight1Pos = 300, liftHeight2Pos = 600, liftHeight3Pos = 905;
     private int tempHeight = 905;
 
     //Outtake wrist
     private double outtakeWristOutPos = .2;
-    private double outtakeWristInPos = .86;
+    private double outtakeWristInPos = .76;//.86
 
     //Outtake Claw
     private double outtakeClawOpenPos = .75;
     private double outtakeClawClosedPos = 0;
 
     //Intake wrist
-    private double intakeWristInPos = .15, intakeWristOutPos = .76, intakeWristMidPos = .5;
+
+    //.15
+    private double intakeWristInPos = .05, intakeWristOutPos = .78, intakeWristMidPos = .5;
 
     //grippers
-    private double leftGripperOpenPos = 1.0;
-    private double leftGripperClosedPos = .75;
+    private double rightGripperOpenPos = .05;
+    private double rightGripperClosedPos = .33;
 
     //Timers
     ElapsedTime clock1 = new ElapsedTime();
@@ -41,16 +42,19 @@ public class HarpsichordStandardSymbiote {
 
     //Other
     boolean automaticMode = false;
+    public boolean cyclingMode = false;
+    public boolean firstDelivery = false;
 
     //Flags
     boolean shouldPrime = false, shouldGrab = false, shouldPrepareDelivery = false, shouldDeliver = false, shouldRest = false;
     boolean isBusy = false;
     public boolean readyFlag = false;
+    boolean wasClockReset = false;
 
     //State Machine Enums
     public enum PRIMESTATE{
-        RESET,
         EXTEND,
+        RESET,
         CANCEL
     }
 
@@ -65,7 +69,6 @@ public class HarpsichordStandardSymbiote {
     }
 
     public enum DELIVERYSTATE{
-        PREPARE,
         DELIVER,
         RESET,
         CANCEL
@@ -73,8 +76,8 @@ public class HarpsichordStandardSymbiote {
 
     //State Machine Flags
     public PRIMESTATE primeState = PRIMESTATE.RESET;
-    GRABSTATE grabState = GRABSTATE.GRAB;
-    DELIVERYSTATE deliveryState = DELIVERYSTATE.PREPARE;
+    public GRABSTATE grabState = GRABSTATE.GRAB;
+    public DELIVERYSTATE deliveryState = DELIVERYSTATE.DELIVER;
 
 
 
@@ -85,7 +88,7 @@ public class HarpsichordStandardSymbiote {
         setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
         setIntakeExtension(0, 1); //Pull back the intake
         setIntakeWristPos(1);
-        setIntakeGrippersPos(0);
+        setIntakeGrippersPos(2);
         setIntakeWristUpperPos(1);
         rampDelay.reset();
 
@@ -93,10 +96,11 @@ public class HarpsichordStandardSymbiote {
     }
 
 
-    public void updateViolaSymbiote(){
+    public void updateHarpsichordSymbiote(){
 
             if(shouldPrime){
                 isBusy = true;
+                /*----------*/
                 //Should we reset?
                 if(drive.intakeWrist.getPosition() < intakeWristOutPos && primeState == PRIMESTATE.RESET) {
                     setIntakeGrippersPos(2); //Close the gripper
@@ -106,73 +110,136 @@ public class HarpsichordStandardSymbiote {
                 else {
                     primeState = PRIMESTATE.EXTEND;
                 }
-
+                /*----------*/
                 //Should we extend under automatic mode?
                 if (automaticMode && drive.intakeSlide.getCurrentPosition() < floatingTargetPos && primeState == PRIMESTATE.EXTEND){
-                    setIntakeExtension(3, 1); //Extend the intake, using the distance sensor
+                    setIntakeExtension(4, 1); //Extend the intake, using the distance sensor
                     setIntakeGrippersPos(0); //Open the grippers
                 }
+                /*----------*/
                 //Should we extend under manual mode?
                 else if (!automaticMode && drive.intakeSlide.getCurrentPosition() < extendedPos && primeState == PRIMESTATE.EXTEND){
-                    setIntakeExtension(2, 1); //Extend the intake
+                    setIntakeExtension(3, 1); //Extend the intake
                     setIntakeGrippersPos(0); //Open the grippers
                 }
+                /*----------*/
                 //Now that we're finished, set everything back up for next time.
                 else{
                     primeState = PRIMESTATE.RESET;
                     shouldPrime = false;
                     isBusy = false;
-                    if(automaticMode){
-                        shouldGrab = true;
-                    }
+                    wasClockReset = false;
+//                    if(cyclingMode){
+//                        shouldGrab = true;
+//                    }
                 }
             }
 
             else if(shouldGrab){
+                isBusy = true;
+
+                if(!wasClockReset){ //Reset the clock
+                    clock1.reset();
+                    wasClockReset = true;
+                }
+                /*----------*/
                 //Should we close the gripper?
-                if(grabState == GRABSTATE.GRAB && drive.intakeGrip2.getPosition() < leftGripperClosedPos){
+                if(grabState == GRABSTATE.GRAB && clock1.milliseconds() < 400 && wasClockReset){
                     setIntakeGrippersPos(2); //close the gripper
                     setOuttakePos(outtakeWristInPos, outtakeClawOpenPos); //Ensure the outtake is properly set up
                 }
-                else {
+                else if(grabState == GRABSTATE.GRAB && clock1.milliseconds() > 400 && wasClockReset){
                     grabState = GRABSTATE.RETRACT;
+                    wasClockReset = false;
                 }
+                /*----------*/
                 //Should we retract the intake?
                 if(grabState == GRABSTATE.RETRACT && drive.intakeSlide.getCurrentPosition() > transferPos){
                     setIntakeWristPos(1);//Send wrist to a mid point
-                    setIntakeExtension(0, .5); //Pull back the intake
+                    setIntakeExtension(2, .5); //Pull back the intake
                 }
-                else{
+                else if (grabState == GRABSTATE.RETRACT && drive.intakeSlide.getCurrentPosition() <= transferPos){
                     grabState = GRABSTATE.PREPARE_TRANSFER;
+                    wasClockReset = false;
+                    clock1.reset();
                 }
+                /*----------*/
                 //Should we prepare to transfer?
-                if(grabState == GRABSTATE.PREPARE_TRANSFER && drive.intakeWrist.getPosition() > intakeWristInPos){
+                if(grabState == GRABSTATE.PREPARE_TRANSFER && clock1.milliseconds() < 400 && wasClockReset){
                     setIntakeWristPos(2); //Pull the wrist up
                 }
-                else {
+                else if(grabState == GRABSTATE.PREPARE_TRANSFER && clock1.milliseconds() > 400 && wasClockReset){
                     grabState = GRABSTATE.TRANSFER;
+                    wasClockReset = false;
+                    clock1.reset();
                 }
+                /*----------*/
                 //Should we transfer?
-                if(grabState == GRABSTATE.TRANSFER && drive.intakeGrip2.getPosition() > leftGripperOpenPos){
-                    setIntakeGrippersPos(3); //Open the grippers
+                if(grabState == GRABSTATE.TRANSFER && clock1.milliseconds() < 400 && wasClockReset){
+                    setIntakeGrippersPos(0); //Open the grippers
                 }
-                else {
+                else if(grabState == GRABSTATE.TRANSFER && clock1.milliseconds() > 400 && wasClockReset){
                     grabState = GRABSTATE.LIFT;
                 }
+                /*----------*/
                 //Should we lift up?
-                if(grabState == GRABSTATE.RETRACT && drive.lift.getCurrentPosition() < tempHeight){
+                if(grabState == GRABSTATE.LIFT && drive.lift.getCurrentPosition() < tempHeight){
                     setIntakeWristPos(1);//Send wrist to a mid point
-                    setIntakeExtension(0, .5); //Pull back the intake
+                    setOuttakePos(outtakeWristOutPos, outtakeClawClosedPos);
+                    setIntakeGrippersPos(2); //Close the gripper
+                    setLiftTargetPosition(4, 1);
                 }
-                else{
-                    grabState = GRABSTATE.PREPARE_TRANSFER;
+                else if(grabState == GRABSTATE.LIFT && drive.lift.getCurrentPosition() >= tempHeight){
+                    grabState = GRABSTATE.GRAB;
+                    shouldGrab = false;
+                    isBusy = false;
+                    wasClockReset = false;
+                    if(cyclingMode){
+                        shouldDeliver = true;
+                    }
                 }
             }
             else if (shouldPrepareDelivery){
+                setOuttakePos(outtakeWristOutPos, outtakeClawClosedPos);
+                setIntakeWristPos(0); //Lower the wrist
+                shouldPrepareDelivery = false;
+                wasClockReset = false;
 
             }
             else if (shouldDeliver){
+                isBusy = true;
 
+                if(!wasClockReset){ //Reset the clock
+                    clock1.reset();
+                    wasClockReset = true;
+                }
+                /*----------*/
+                //Should we deliver the cone?
+                if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() < 800 && wasClockReset){
+                    setOuttakePos(outtakeWristOutPos, outtakeClawOpenPos);
+                    setIntakeGrippersPos(0); //Open the grippers
+                    setIntakeWristPos(0); //Lower the wrist
+                }
+                else if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() > 800 && wasClockReset){
+                    deliveryState = DELIVERYSTATE.RESET;
+                }
+                /*----------*/
+                //Should we reset?
+                if(deliveryState == DELIVERYSTATE.RESET && drive.lift.getCurrentPosition() > liftRestPosition){
+                    setLiftTargetPosition(0, .75); //Return the lift to rest position
+
+                    setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
+
+                    if(cyclingMode){
+                        setIntakeExtension(3, 1); //Extend the intake
+                    }
+                }
+                else if(deliveryState == DELIVERYSTATE.RESET && drive.lift.getCurrentPosition() <= liftRestPosition){
+                    deliveryState = DELIVERYSTATE.DELIVER;
+                    shouldDeliver = false;
+                    isBusy = false;
+                    wasClockReset = false;
+                }
             }
             else if(shouldRest){
                 setLiftTargetPosition(0, 1); //Return the lift to rest position
@@ -185,81 +252,178 @@ public class HarpsichordStandardSymbiote {
 
     }
 
-    public void updateAutonomousViolaSymbiote(int stage, int height){
+    public void updateAutonomousHarpsichordSymbiote(int cone){
 
-        if(stage == 1){
-
-//            setIntakeExtension(1); //Extend the intake
-            setIntakeWristPos(height+2);//Lower the wrist
-            setIntakeWristUpperPos(height); //Angle the upper wrist
-            setIntakeGrippersPos(0); //Open the grippers
-
-            wait(800);
-
-            setIntakeGrippersPos(2); //close the gripper
-
-            wait(400);
-
-            setIntakeWristPos(1);//Mid point
-            setIntakeWristUpperPos(0); // Return the upper wrist to default
-
-            wait(200);
-
-            if(height == 5) {
-//                setIntakeExtension(2); //Pull back the intake
+        if(shouldPrime){
+            isBusy = true;
+            /*----------*/
+            //Should we reset?
+            if(drive.intakeWrist.getPosition() < intakeWristOutPos && primeState == PRIMESTATE.RESET) {
+                setIntakeGrippersPos(2); //Close the gripper
+                setIntakeWristPos(cone+2); //Lower the wrist
+                setIntakeWristUpperPos(cone);
+                setLiftTargetPosition(0, 1); //Return lift to rest position
             }
             else {
-//                drive.intakeExtension.setPosition(.22);
-//                drive.intakeExtensionRight.setPosition(.82);
+                primeState = PRIMESTATE.EXTEND;
             }
-
-            wait(100);
-
-            setIntakeWristPos(2); //Pull the wrist up
-
-            wait(600);
-
-            setIntakeGrippersPos(0); //Open the grippers
-
-            wait(600);
-
-            setLiftTargetPosition(3, 1); //Lift up the lift
-
-            wait(1600);
-
-//            while(drive.lift.getTargetPosition() < (4600 - liftRestPosition)){drive.update();}
-
-            setIntakeGrippersPos(2); //close the gripper
-            setOuttakePos(outtakeWristInPos, outtakeClawClosedPos);
-            setIntakeWristPos(1); //Wrist mid point
-
-            wait(700);
-
-
+            /*----------*/
+            //Should we extend under automatic mode?
+            if (automaticMode && drive.intakeSlide.getCurrentPosition() < floatingTargetPos && primeState == PRIMESTATE.EXTEND){
+                setIntakeExtension(4, 1); //Extend the intake, using the distance sensor
+                setIntakeGrippersPos(0); //Open the grippers
+            }
+            /*----------*/
+            //Should we extend under manual mode?
+            else if (!automaticMode && drive.intakeSlide.getCurrentPosition() < extendedPos && primeState == PRIMESTATE.EXTEND){
+                setIntakeExtension(3, 1); //Extend the intake
+                setIntakeGrippersPos(0); //Open the grippers
+            }
+            /*----------*/
+            //Now that we're finished, set everything back up for next time.
+            else{
+                primeState = PRIMESTATE.RESET;
+                shouldPrime = false;
+                isBusy = false;
+                wasClockReset = false;
+                shouldGrab = true;
+            }
         }
-        else if (stage == 2 || stage == 3){
+        else if(shouldGrab){
+            isBusy = true;
 
-            if(stage == 3) {
+            if(!wasClockReset){ //Reset the clock
+                clock1.reset();
+                wasClockReset = true;
+            }
+            /*----------*/
+            //Should we close the gripper?
+            if(grabState == GRABSTATE.GRAB && clock1.milliseconds() < 400 && wasClockReset){
+                setIntakeGrippersPos(2); //close the gripper
+                setOuttakePos(outtakeWristInPos, outtakeClawOpenPos); //Ensure the outtake is properly set up
+            }
+            else if(grabState == GRABSTATE.GRAB && clock1.milliseconds() > 400 && wasClockReset){
+                grabState = GRABSTATE.RETRACT;
+                wasClockReset = false;
+            }
+            /*----------*/
+            //Should we retract the intake?
+            if(grabState == GRABSTATE.RETRACT && drive.intakeSlide.getCurrentPosition() > transferPos){
+                setIntakeWristPos(1);//Send wrist to a mid point
+                setIntakeExtension(2, .5); //Pull back the intake
+            }
+            else if (grabState == GRABSTATE.RETRACT && drive.intakeSlide.getCurrentPosition() <= transferPos){
+                grabState = GRABSTATE.PREPARE_TRANSFER;
+                wasClockReset = false;
+                clock1.reset();
+            }
+            /*----------*/
+            //Should we prepare to transfer?
+            if(grabState == GRABSTATE.PREPARE_TRANSFER && clock1.milliseconds() < 400 && wasClockReset){
+                setIntakeWristPos(2); //Pull the wrist up
+            }
+            else if(grabState == GRABSTATE.PREPARE_TRANSFER && clock1.milliseconds() > 400 && wasClockReset){
+                grabState = GRABSTATE.TRANSFER;
+                wasClockReset = false;
+                clock1.reset();
+            }
+            /*----------*/
+            //Should we transfer?
+            if(grabState == GRABSTATE.TRANSFER && clock1.milliseconds() < 400 && wasClockReset){
+                setIntakeGrippersPos(0); //Open the grippers
+            }
+            else if(grabState == GRABSTATE.TRANSFER && clock1.milliseconds() > 400 && wasClockReset){
+                grabState = GRABSTATE.LIFT;
+            }
+            /*----------*/
+            //Should we lift up?
+            if(grabState == GRABSTATE.LIFT && drive.lift.getCurrentPosition() < tempHeight){
+                setIntakeWristPos(1);//Send wrist to a mid point
                 setOuttakePos(outtakeWristOutPos, outtakeClawClosedPos);
-                setLiftTargetPosition(3, 1); //Lift up the lift
-
-//                while(drive.lift.getTargetPosition() <= (4600 - liftRestPosition)){drive.update();}
-
-                wait(2000);
+                setIntakeGrippersPos(2); //Close the gripper
+                setLiftTargetPosition(4, 1);
             }
-
-            setOuttakePos(outtakeWristOutPos, outtakeClawOpenPos);
-
-            wait(800);
-
-            setLiftTargetPosition(0, 1); //Return the lift to rest position
-            setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
-
+            else if(grabState == GRABSTATE.LIFT && drive.lift.getCurrentPosition() >= tempHeight){
+                grabState = GRABSTATE.GRAB;
+                shouldGrab = false;
+                wasClockReset = false;
+                shouldDeliver = true;
+            }
         }
-        else if(stage == 4){
+        else if (shouldDeliver){
+            isBusy = true;
+
+            if(!wasClockReset){ //Reset the clock
+                clock1.reset();
+                wasClockReset = true;
+            }
+            /*----------*/
+            //Should we lift if this is the first delivery?
+            if(deliveryState == DELIVERYSTATE.DELIVER && drive.lift.getCurrentPosition() < tempHeight && firstDelivery){
+                setLiftTargetPosition(3, 1);
+            }
+            else if(deliveryState == DELIVERYSTATE.DELIVER && drive.lift.getCurrentPosition() >= tempHeight && firstDelivery){
+                firstDelivery = false;
+            }
+            /*----------*/
+            //Should we deliver the cone?
+            if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() < 800 && wasClockReset && !firstDelivery){
+                setOuttakePos(outtakeWristOutPos, outtakeClawOpenPos);
+                setIntakeWristPos(0); //Lower the wrist
+            }
+            else if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() > 800 && wasClockReset && !firstDelivery){
+                deliveryState = DELIVERYSTATE.RESET;
+            }
+            /*----------*/
+            //Should we reset?
+            if(deliveryState == DELIVERYSTATE.RESET && drive.lift.getCurrentPosition() > liftRestPosition){
+                setLiftTargetPosition(0, .25); //Return the lift to rest position
+
+                setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
+
+                setIntakeExtension(3, 1); //Extend the intake
+
+            }
+            else if(deliveryState == DELIVERYSTATE.RESET && drive.lift.getCurrentPosition() <= liftRestPosition){
+                deliveryState = DELIVERYSTATE.DELIVER;
+                shouldDeliver = false;
+                wasClockReset = false;
+                isBusy = false;
+            }
+        }
+        else if (shouldPrepareDelivery){
+            isBusy = true;
+
+            if(!wasClockReset){ //Reset the clock
+                clock1.reset();
+                wasClockReset = true;
+            }
+            /*----------*/
+            //Should we prepare to transfer?
+            if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() < 800 && wasClockReset){
+                setIntakeWristPos(2); //Pull the wrist up
+                setIntakeExtension(1, .7); //Pull back the intake
+            }
+            else if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() > 800 && wasClockReset){
+                deliveryState = DELIVERYSTATE.RESET;
+                wasClockReset = false;
+                clock1.reset();
+            }
+            /*----------*/
+            //Should we transfer?
+            if(deliveryState == DELIVERYSTATE.RESET && clock1.milliseconds() < 400 && wasClockReset){
+                setIntakeGrippersPos(0); //Open the grippers
+            }
+            else if(deliveryState == DELIVERYSTATE.RESET && clock1.milliseconds() > 400 && wasClockReset){
+                deliveryState = DELIVERYSTATE.DELIVER;
+                shouldPrepareDelivery = false;
+                isBusy = false;
+            }
+        }
+        else if(shouldRest){
             setLiftTargetPosition(0, 1); //Return the lift to rest position
             setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
-//            setIntakeExtension(0); //Pull back the intake
+            setIntakeExtension(0, .5); //Pull back the intake
             setIntakeWristPos(1);
             setIntakeGrippersPos(0);
             shouldRest = false;
@@ -291,18 +455,21 @@ public class HarpsichordStandardSymbiote {
     }
 
     public void sendStatusRequest(int status){
-        if(!drive.isBusy()) {
+        if(!isBusy) {
             switch (status) {
                 case 0:
+                    isBusy = true;
                     shouldPrime = true;
                     break;
                 case 1:
+                    isBusy = true;
                     shouldGrab = true;
                     break;
                 case 2:
                     shouldPrepareDelivery = true;
                     break;
                 case 3:
+                    isBusy = true;
                     shouldDeliver = true;
                     break;
                 case 4:
@@ -320,6 +487,7 @@ public class HarpsichordStandardSymbiote {
     //2 = Level 2
     //3 = Level 3
     //4 = Level 4
+    //5 = Level 5
     public void setIntakeWristUpperPos(int position){
         switch(position){
             case 1:
@@ -348,17 +516,17 @@ public class HarpsichordStandardSymbiote {
     public void setIntakeGrippersPos(int position){
         switch(position){
             case 0:
-                drive.intakeGrip1.setPosition(.05);
-                drive.intakeGrip2.setPosition(leftGripperOpenPos);
+                drive.intakeGrip1.setPosition(rightGripperOpenPos);//.05
+                drive.intakeGrip2.setPosition(1.0);//1.0
                 break;
             case 1:
                 //Todo: Find a mid position. Low importance
-                drive.intakeGrip1.setPosition(.2);
-                drive.intakeGrip2.setPosition(.8);
+                drive.intakeGrip1.setPosition(.2);//.2
+                drive.intakeGrip2.setPosition(.8);//.8
                 break;
             case 2:
-                drive.intakeGrip1.setPosition(.33);
-                drive.intakeGrip2.setPosition(leftGripperClosedPos);
+                drive.intakeGrip1.setPosition(rightGripperClosedPos);//.33
+                drive.intakeGrip2.setPosition(.75);//.75
                 break;
         }
     }
@@ -408,8 +576,9 @@ public class HarpsichordStandardSymbiote {
 
     //0 = fully retracted
     //1 = transfer pose direct
-    //2 = fully extended
-    //3 = fully extended position with damping
+    //2 = transfer pose with ramp
+    //3 = fully extended
+    //4 = fully extended position with damping
     public void setIntakeExtension(int position, double pow){
 
 
@@ -424,10 +593,14 @@ public class HarpsichordStandardSymbiote {
                 drive.intakeSlide.setTargetPosition(transferPos);
                 break;
             case 2:
+                drive.intakeSlide.setPower(drive.intakeSlide.getCurrentPosition() * .005);
+                drive.intakeSlide.setTargetPosition(transferPos);
+                break;
+            case 3:
                 drive.intakeSlide.setPower(pow);
                 drive.intakeSlide.setTargetPosition(extendedPos);
                 break;
-            case 3:
+            case 4:
                 drive.intakeSlide.setPower(pow);
 //                if(drive.intakeSlide.getCurrentPosition() < 170 && drive.forwardSensor.getDistance(DistanceUnit.INCH) > 2.5){
 //                    drive.intakeSlide.setPower(pow * (drive.forwardSensor.getDistance(DistanceUnit.INCH) * (drive.forwardSensor.getDistance(DistanceUnit.INCH) > 10?.05:.05)));
@@ -461,6 +634,9 @@ public class HarpsichordStandardSymbiote {
                 break;
             case 3:
                 drive.lift.setTargetPosition(liftHeight3Pos);
+                break;
+            case 4:
+                drive.lift.setTargetPosition(tempHeight);
                 break;
         }
     }

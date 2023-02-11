@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 @TeleOp
-@Disabled
+//@Disabled
 public class ServoCalibrator extends LinearOpMode {
     public Servo servo, servo2;
 
@@ -20,7 +20,7 @@ public class ServoCalibrator extends LinearOpMode {
         timer.reset();
         timer2.reset();
 
-        servo = hardwareMap.get(Servo.class, "outtakeWrist");
+        servo = hardwareMap.get(Servo.class, "intakeGrippers1");
         servo2 = hardwareMap.get(Servo.class, "outtakeClaw");
         waitForStart();
         while(opModeIsActive() && !isStopRequested()){

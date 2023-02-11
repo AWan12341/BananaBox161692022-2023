@@ -2,19 +2,20 @@ package org.firstinspires.ftc.teamcode.tele;
 
 import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
-import org.firstinspires.ftc.teamcode.symbiotes.OboeStandardSymbiote;
-import org.firstinspires.ftc.teamcode.symbiotes.ViolaStandardSymbiote;
+import org.firstinspires.ftc.teamcode.symbiotes.vision.deprecated.OboeStandardSymbiote;
 import org.firstinspires.ftc.teamcode.symbiotes.vision.CombinedDetectorHandler;
 import org.firstinspires.ftc.teamcode.symbiotes.vision.utility.TrackType;
 import org.firstinspires.ftc.teamcode.util.Storage;
 
 @TeleOp(group = "drive")
+@Disabled
 public class Symphony extends LinearOpMode {
 
     int testMode = 0;

@@ -142,6 +142,7 @@ public class SampleMecanumDrive extends MecanumDrive {
 
 
         intakeSlide = hardwareMap.get(DcMotorEx.class, "intakeSlides");
+        intakeSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         intakeSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         intakeSlide.setTargetPosition(0);
         intakeSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -177,11 +178,11 @@ public class SampleMecanumDrive extends MecanumDrive {
 
         // TODO: reverse any motors using DcMotor.setDirection()
 
-        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
+//        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
+//        leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
 
-//          rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
-//          rightRear.setDirection(DcMotorSimple.Direction.REVERSE);
+          rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
+          rightRear.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // TODO: if desired, use setLocalizer() to change the localization method
         // for instance, setLocalizer(new ThreeTrackingWheelLocalizer(...));

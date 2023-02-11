@@ -11,9 +11,9 @@ public class Storage {
 
     static StartPositions start = StartPositions.NONE;
 
-    static Pose2d startPosAudienceBlue = new Pose2d(32, 60, Math.toRadians(-90));
+    static Pose2d startPosAudienceBlue = new Pose2d(35, 60, Math.toRadians(-90));
 
-    static Pose2d startPosAudienceRed = new Pose2d(32, -60, Math.toRadians(90));
+    static Pose2d startPosAudienceRed = new Pose2d(-35, -60, Math.toRadians(90));
 
     static Pose2d startPosAwayBlue = new Pose2d(35, -60, Math.toRadians(0));
 
