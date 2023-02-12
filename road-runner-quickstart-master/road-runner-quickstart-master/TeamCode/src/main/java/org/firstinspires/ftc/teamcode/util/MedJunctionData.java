@@ -14,7 +14,7 @@ public class MedJunctionData {
 
     //RED
     //AUDIENCE
-    static Pose2d RedAudience1 = new Pose2d(-35, -15, Math.toRadians(160)); //READY
+    static Pose2d RedAudience1 = new Pose2d(-36, -16, Math.toRadians(165)); //READY
     static Pose2d RedAudience2 = new Pose2d(0, 0, Math.toRadians(0));
     static Pose2d RedAudience3 = new Pose2d(1, 1, Math.toRadians(0));
 

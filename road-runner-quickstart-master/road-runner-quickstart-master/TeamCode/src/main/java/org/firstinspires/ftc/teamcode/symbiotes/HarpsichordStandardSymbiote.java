@@ -11,10 +11,10 @@ public class HarpsichordStandardSymbiote {
     private SampleMecanumDrive drive;
 
     //Slide positions
-    private int extendedPos = 340, retractedPos = -10, transferPos = 130, floatingTargetPos = 130;//85
+    private int extendedPos = 345, retractedPos = -10, transferPos = 130, restPos = 190, floatingTargetPos = 130;//85
     //Lift positions
     private int liftRestPosition = 100;
-    private int liftHeight1Pos = 300, liftHeight2Pos = 600, liftHeight3Pos = 905;
+    private int liftHeight1Pos = 300, liftHeight2Pos = 500, liftHeight3Pos = 905;
     private int tempHeight = 905;
 
     //Outtake wrist
@@ -74,10 +74,27 @@ public class HarpsichordStandardSymbiote {
         CANCEL
     }
 
+    public enum AUTONOMOUSSTATE{
+        INITIAL_PREPARE_STAGE1,
+        INITIAL_PREPARE_STAGE2,
+        INITIAL_PREPARE_STAGE3,
+        INITIAL_DELIVERY_STAGE1,
+        INITIAL_DELIVERY_STAGE2,
+        EXTEND,
+        GRIP,
+        PREPARE_RETRACTION,
+        RETRACT,
+        PREPARE_TRANSFER,
+        TRANSFER,
+        LIFT,
+        DELIVER
+    }
+
     //State Machine Flags
     public PRIMESTATE primeState = PRIMESTATE.RESET;
     public GRABSTATE grabState = GRABSTATE.GRAB;
     public DELIVERYSTATE deliveryState = DELIVERYSTATE.DELIVER;
+    public AUTONOMOUSSTATE autoState = AUTONOMOUSSTATE.INITIAL_PREPARE_STAGE1;
 
 
 
@@ -87,7 +104,7 @@ public class HarpsichordStandardSymbiote {
         setLiftTargetPosition(0, 1); //Return the lift to rest position
         setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
         setIntakeExtension(0, 1); //Pull back the intake
-        setIntakeWristPos(1);
+        drive.intakeWrist.setPosition(.4);
         setIntakeGrippersPos(2);
         setIntakeWristUpperPos(1);
         rampDelay.reset();
@@ -252,181 +269,146 @@ public class HarpsichordStandardSymbiote {
 
     }
 
-    public void updateAutonomousHarpsichordSymbiote(int cone){
+    public void updateAutonomousHarpsichordSymbiote(int cone, int height){
 
-        if(shouldPrime){
+        if(!wasClockReset){ //Reset the clock
+            clock1.reset();
+            wasClockReset = true;
+        }
+        if(shouldPrime) {
             isBusy = true;
-            /*----------*/
-            //Should we reset?
-            if(drive.intakeWrist.getPosition() < intakeWristOutPos && primeState == PRIMESTATE.RESET) {
-                setIntakeGrippersPos(2); //Close the gripper
-                setIntakeWristPos(cone+2); //Lower the wrist
-                setIntakeWristUpperPos(cone);
-                setLiftTargetPosition(0, 1); //Return lift to rest position
+            if (autoState == AUTONOMOUSSTATE.INITIAL_PREPARE_STAGE1 && clock1.milliseconds() < 500 && wasClockReset) {
+                setIntakeWristPos(2); //Pull the wrist in
+                setIntakeExtension(1, .7); //Set the intake to the initial position
             }
-            else {
-                primeState = PRIMESTATE.EXTEND;
+            else if(autoState == AUTONOMOUSSTATE.INITIAL_PREPARE_STAGE1 && clock1.milliseconds() > 500 && wasClockReset){
+                wasClockReset = false;
+                autoState = AUTONOMOUSSTATE.INITIAL_PREPARE_STAGE2;
             }
-            /*----------*/
-            //Should we extend under automatic mode?
-            if (automaticMode && drive.intakeSlide.getCurrentPosition() < floatingTargetPos && primeState == PRIMESTATE.EXTEND){
-                setIntakeExtension(4, 1); //Extend the intake, using the distance sensor
-                setIntakeGrippersPos(0); //Open the grippers
+
+            if (autoState == AUTONOMOUSSTATE.INITIAL_PREPARE_STAGE2 && clock1.milliseconds() < 500 && wasClockReset) {
+                setIntakeGrippersPos(0); // Open the grips
             }
-            /*----------*/
-            //Should we extend under manual mode?
-            else if (!automaticMode && drive.intakeSlide.getCurrentPosition() < extendedPos && primeState == PRIMESTATE.EXTEND){
-                setIntakeExtension(3, 1); //Extend the intake
-                setIntakeGrippersPos(0); //Open the grippers
+            else if(autoState == AUTONOMOUSSTATE.INITIAL_PREPARE_STAGE2 && clock1.milliseconds() > 500 && wasClockReset){
+                wasClockReset = false;
+                autoState = AUTONOMOUSSTATE.INITIAL_PREPARE_STAGE3;
             }
-            /*----------*/
-            //Now that we're finished, set everything back up for next time.
-            else{
-                primeState = PRIMESTATE.RESET;
+
+            if (autoState == AUTONOMOUSSTATE.INITIAL_PREPARE_STAGE3 && clock1.milliseconds() < 500 && wasClockReset) {
+                setIntakeExtension(0, 1);
+                setIntakeWristPos(1);
+            }
+            else if(autoState == AUTONOMOUSSTATE.INITIAL_PREPARE_STAGE3 && clock1.milliseconds() > 500 && wasClockReset){
+                wasClockReset = false;
+                isBusy = false;
                 shouldPrime = false;
-                isBusy = false;
-                wasClockReset = false;
-                shouldGrab = true;
+                autoState = AUTONOMOUSSTATE.INITIAL_DELIVERY_STAGE1;
             }
         }
-        else if(shouldGrab){
+        if(shouldGrab) {
             isBusy = true;
-
-            if(!wasClockReset){ //Reset the clock
-                clock1.reset();
-                wasClockReset = true;
+            if (autoState == AUTONOMOUSSTATE.INITIAL_DELIVERY_STAGE1 && drive.lift.getCurrentPosition() < tempHeight) {
+                setLiftTargetPosition(height, 1); //Send the lift to the height
+                setIntakeExtension(5, 1); //Set the intake to a mid way position so the claw can close
             }
-            /*----------*/
-            //Should we close the gripper?
-            if(grabState == GRABSTATE.GRAB && clock1.milliseconds() < 400 && wasClockReset){
-                setIntakeGrippersPos(2); //close the gripper
-                setOuttakePos(outtakeWristInPos, outtakeClawOpenPos); //Ensure the outtake is properly set up
-            }
-            else if(grabState == GRABSTATE.GRAB && clock1.milliseconds() > 400 && wasClockReset){
-                grabState = GRABSTATE.RETRACT;
+            else if(autoState == AUTONOMOUSSTATE.INITIAL_DELIVERY_STAGE1 && drive.lift.getCurrentPosition() >= tempHeight){
+                autoState = AUTONOMOUSSTATE.INITIAL_DELIVERY_STAGE2;
+                setIntakeGrippersPos(2); //Close the grippers
                 wasClockReset = false;
             }
-            /*----------*/
-            //Should we retract the intake?
-            if(grabState == GRABSTATE.RETRACT && drive.intakeSlide.getCurrentPosition() > transferPos){
-                setIntakeWristPos(1);//Send wrist to a mid point
-                setIntakeExtension(2, .5); //Pull back the intake
+            if (autoState == AUTONOMOUSSTATE.INITIAL_DELIVERY_STAGE2 && clock1.milliseconds() < 600 && wasClockReset) {
+                setOuttakePos(outtakeWristOutPos, outtakeClawOpenPos); //Deliver the first cone
+                setIntakeGrippersPos(2); //Close the grippers
             }
-            else if (grabState == GRABSTATE.RETRACT && drive.intakeSlide.getCurrentPosition() <= transferPos){
-                grabState = GRABSTATE.PREPARE_TRANSFER;
-                wasClockReset = false;
-                clock1.reset();
-            }
-            /*----------*/
-            //Should we prepare to transfer?
-            if(grabState == GRABSTATE.PREPARE_TRANSFER && clock1.milliseconds() < 400 && wasClockReset){
-                setIntakeWristPos(2); //Pull the wrist up
-            }
-            else if(grabState == GRABSTATE.PREPARE_TRANSFER && clock1.milliseconds() > 400 && wasClockReset){
-                grabState = GRABSTATE.TRANSFER;
-                wasClockReset = false;
-                clock1.reset();
-            }
-            /*----------*/
-            //Should we transfer?
-            if(grabState == GRABSTATE.TRANSFER && clock1.milliseconds() < 400 && wasClockReset){
-                setIntakeGrippersPos(0); //Open the grippers
-            }
-            else if(grabState == GRABSTATE.TRANSFER && clock1.milliseconds() > 400 && wasClockReset){
-                grabState = GRABSTATE.LIFT;
-            }
-            /*----------*/
-            //Should we lift up?
-            if(grabState == GRABSTATE.LIFT && drive.lift.getCurrentPosition() < tempHeight){
-                setIntakeWristPos(1);//Send wrist to a mid point
-                setOuttakePos(outtakeWristOutPos, outtakeClawClosedPos);
-                setIntakeGrippersPos(2); //Close the gripper
-                setLiftTargetPosition(4, 1);
-            }
-            else if(grabState == GRABSTATE.LIFT && drive.lift.getCurrentPosition() >= tempHeight){
-                grabState = GRABSTATE.GRAB;
+            else if(autoState == AUTONOMOUSSTATE.INITIAL_DELIVERY_STAGE2 && clock1.milliseconds() > 600 && wasClockReset){
+                setIntakeGrippersPos(2); //Close the grippers
+                autoState = AUTONOMOUSSTATE.EXTEND;
+                isBusy = false;
                 shouldGrab = false;
-                wasClockReset = false;
-                shouldDeliver = true;
             }
         }
-        else if (shouldDeliver){
+        if(shouldDeliver) {
             isBusy = true;
-
-            if(!wasClockReset){ //Reset the clock
-                clock1.reset();
-                wasClockReset = true;
-            }
-            /*----------*/
-            //Should we lift if this is the first delivery?
-            if(deliveryState == DELIVERYSTATE.DELIVER && drive.lift.getCurrentPosition() < tempHeight && firstDelivery){
-                setLiftTargetPosition(3, 1);
-            }
-            else if(deliveryState == DELIVERYSTATE.DELIVER && drive.lift.getCurrentPosition() >= tempHeight && firstDelivery){
-                firstDelivery = false;
-            }
-            /*----------*/
-            //Should we deliver the cone?
-            if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() < 800 && wasClockReset && !firstDelivery){
-                setOuttakePos(outtakeWristOutPos, outtakeClawOpenPos);
-                setIntakeWristPos(0); //Lower the wrist
-            }
-            else if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() > 800 && wasClockReset && !firstDelivery){
-                deliveryState = DELIVERYSTATE.RESET;
-            }
-            /*----------*/
-            //Should we reset?
-            if(deliveryState == DELIVERYSTATE.RESET && drive.lift.getCurrentPosition() > liftRestPosition){
-                setLiftTargetPosition(0, .25); //Return the lift to rest position
-
-                setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
-
+            //Now out of one-time prep stages
+            if (autoState == AUTONOMOUSSTATE.EXTEND && drive.intakeSlide.getCurrentPosition() < extendedPos) {
+                setIntakeGrippersPos(0); //Ensure the grippers are open
+                setLiftTargetPosition(0, 1); //Lower the delivery lift
+                setIntakeWristPos(cone+2); //Extend the wrist TODO
+                setIntakeWristUpperPos(cone); //Set the upper wrist TODO
                 setIntakeExtension(3, 1); //Extend the intake
+                setOuttakePos(outtakeWristInPos, outtakeClawOpenPos); //Ensure the outtake is set up
+            }
+            else if(autoState == AUTONOMOUSSTATE.EXTEND && drive.intakeSlide.getCurrentPosition() >= extendedPos){
+                autoState = AUTONOMOUSSTATE.GRIP;
+                wasClockReset = false;
+            }
+
+            if (autoState == AUTONOMOUSSTATE.GRIP && clock1.milliseconds() < 800 && wasClockReset) {
+                setIntakeGrippersPos(2); //Grip the cone
+            }
+            else if(autoState == AUTONOMOUSSTATE.GRIP && clock1.milliseconds() > 800 && wasClockReset){
+                autoState = AUTONOMOUSSTATE.PREPARE_RETRACTION;
+                wasClockReset = false;
+            }
+
+            if (autoState == AUTONOMOUSSTATE.PREPARE_RETRACTION && clock1.milliseconds() < 400 && wasClockReset) {
+                if(cone > 1)
+                    drive.intakeWrist.setPosition(.4); //Pop up the cone
+                else
+                    drive.intakeWrist.setPosition(.5);
+                setIntakeWristUpperPos(1); //Return the upper wrist to the default position
+            }
+            else if(autoState == AUTONOMOUSSTATE.PREPARE_RETRACTION && clock1.milliseconds() > 400 && wasClockReset){
+                autoState = AUTONOMOUSSTATE.RETRACT;
+                wasClockReset = false;
+            }
+
+            if (autoState == AUTONOMOUSSTATE.RETRACT && drive.intakeSlide.getCurrentPosition() > transferPos) {
+//                setIntakeExtension(1, 1); //Retract the entire system
+                drive.intakeSlide.setPower(1);
+                drive.intakeSlide.setTargetPosition(155);
 
             }
-            else if(deliveryState == DELIVERYSTATE.RESET && drive.lift.getCurrentPosition() <= liftRestPosition){
-                deliveryState = DELIVERYSTATE.DELIVER;
-                shouldDeliver = false;
+            else if(autoState == AUTONOMOUSSTATE.RETRACT && drive.intakeSlide.getCurrentPosition() <= transferPos){
+                autoState = AUTONOMOUSSTATE.PREPARE_TRANSFER;
                 wasClockReset = false;
-                isBusy = false;
             }
-        }
-        else if (shouldPrepareDelivery){
-            isBusy = true;
 
-            if(!wasClockReset){ //Reset the clock
-                clock1.reset();
-                wasClockReset = true;
+            if (autoState == AUTONOMOUSSTATE.PREPARE_TRANSFER && clock1.milliseconds() < 500 && wasClockReset) {
+                setIntakeWristPos(2); //Pull back in the wrist
             }
-            /*----------*/
-            //Should we prepare to transfer?
-            if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() < 800 && wasClockReset){
-                setIntakeWristPos(2); //Pull the wrist up
-                setIntakeExtension(1, .7); //Pull back the intake
-            }
-            else if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() > 800 && wasClockReset){
-                deliveryState = DELIVERYSTATE.RESET;
+            else if(autoState == AUTONOMOUSSTATE.PREPARE_TRANSFER && clock1.milliseconds() > 500 && wasClockReset){
+                autoState = AUTONOMOUSSTATE.TRANSFER;
                 wasClockReset = false;
-                clock1.reset();
             }
-            /*----------*/
-            //Should we transfer?
-            if(deliveryState == DELIVERYSTATE.RESET && clock1.milliseconds() < 400 && wasClockReset){
-                setIntakeGrippersPos(0); //Open the grippers
+
+            if (autoState == AUTONOMOUSSTATE.TRANSFER && clock1.milliseconds() < 500 && wasClockReset) {
+                setIntakeGrippersPos(0); //Open the grips
+                setIntakeExtension(5, 1);//Set the extension to a neutral position
             }
-            else if(deliveryState == DELIVERYSTATE.RESET && clock1.milliseconds() > 400 && wasClockReset){
-                deliveryState = DELIVERYSTATE.DELIVER;
-                shouldPrepareDelivery = false;
+            else if(autoState == AUTONOMOUSSTATE.TRANSFER && clock1.milliseconds() > 500 && wasClockReset){
+                autoState = AUTONOMOUSSTATE.LIFT;
+                wasClockReset = false;
+            }
+
+            if (autoState == AUTONOMOUSSTATE.LIFT && drive.lift.getCurrentPosition() < tempHeight) {
+                setLiftTargetPosition(height, 1);//Lift the elevator
+            }
+            else if(autoState == AUTONOMOUSSTATE.LIFT && drive.lift.getCurrentPosition() >= tempHeight){
+                autoState = AUTONOMOUSSTATE.DELIVER;
+                wasClockReset = false;
+            }
+
+            if (autoState == AUTONOMOUSSTATE.DELIVER && clock1.milliseconds() < 800 && wasClockReset) {
+                setOuttakePos(outtakeWristOutPos, outtakeClawOpenPos); //Deliver the first cone
+                setIntakeGrippersPos(2); //Close the grippers
+            }
+            else if(autoState == AUTONOMOUSSTATE.DELIVER && clock1.milliseconds() > 800 && wasClockReset){
+                wasClockReset = false;
+                autoState = AUTONOMOUSSTATE.EXTEND;
+                shouldGrab = false;
                 isBusy = false;
             }
-        }
-        else if(shouldRest){
-            setLiftTargetPosition(0, 1); //Return the lift to rest position
-            setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
-            setIntakeExtension(0, .5); //Pull back the intake
-            setIntakeWristPos(1);
-            setIntakeGrippersPos(0);
-            shouldRest = false;
         }
 
     }
@@ -503,7 +485,7 @@ public class HarpsichordStandardSymbiote {
                 drive.intakeWristUpper.setPosition(.6);
                 break;
             case 5:
-                drive.intakeWristUpper.setPosition(.6);
+                drive.intakeWristUpper.setPosition(.63);
                 break;
         }
     }
@@ -554,16 +536,16 @@ public class HarpsichordStandardSymbiote {
                 drive.intakeWrist.setPosition(.78);
                 break;
             case 4:
-                drive.intakeWrist.setPosition(.7);
+                drive.intakeWrist.setPosition(.71);
                 break;
             case 5:
-                drive.intakeWrist.setPosition(.67);
+                drive.intakeWrist.setPosition(.66);
                 break;
             case 6:
-                drive.intakeWrist.setPosition(.6);
+                drive.intakeWrist.setPosition(.62);
                 break;
             case 7:
-                drive.intakeWrist.setPosition(.56);
+                drive.intakeWrist.setPosition(.58);
                 break;
         }
     }
@@ -579,6 +561,7 @@ public class HarpsichordStandardSymbiote {
     //2 = transfer pose with ramp
     //3 = fully extended
     //4 = fully extended position with damping
+    //5 = claw open position
     public void setIntakeExtension(int position, double pow){
 
 
@@ -610,6 +593,10 @@ public class HarpsichordStandardSymbiote {
 //                }
                 floatingTargetPos = (int)(drive.forwardSensor.getDistance(DistanceUnit.INCH) * 8.5);
                 drive.intakeSlide.setTargetPosition(floatingTargetPos);
+                break;
+            case 5:
+                drive.intakeSlide.setPower(pow);
+                drive.intakeSlide.setTargetPosition(restPos);
                 break;
         }
     }
@@ -643,3 +630,196 @@ public class HarpsichordStandardSymbiote {
 
 
 }
+
+//***********Boneyard****************
+//if(shouldPrime){
+//        isBusy = true;
+//
+//        if(!wasClockReset){ //Reset the clock
+//        clock1.reset();
+//        wasClockReset = true;
+//        }
+//        /*----------*/
+//        //Should we reset?
+//        if(clock1.milliseconds() < 800 && wasClockReset && primeState == PRIMESTATE.RESET) {
+//
+//        setIntakeGrippersPos(2); //Close the gripper
+//        setIntakeWristPos(cone+2); //Lower the wrist
+//        setIntakeWristUpperPos(cone);
+//        setLiftTargetPosition(0, 1); //Return lift to rest position
+//        }
+//        else {
+//        primeState = PRIMESTATE.EXTEND;
+//        }
+//        /*----------*/
+//        //Should we extend under automatic mode?
+////            if (automaticMode && drive.intakeSlide.getCurrentPosition() < floatingTargetPos && primeState == PRIMESTATE.EXTEND){
+////                setIntakeExtension(4, 1); //Extend the intake, using the distance sensor
+////                setIntakeGrippersPos(0); //Open the grippers
+////            }
+//        /*----------*/
+//        //Should we extend under manual mode?
+//        if (drive.intakeSlide.getCurrentPosition() < extendedPos && primeState == PRIMESTATE.EXTEND){
+//        setIntakeExtension(3, 1); //Extend the intake
+//        setIntakeGrippersPos(0); //Open the grippers
+//        }
+//        /*----------*/
+//        //Now that we're finished, set everything back up for next time.
+//        else{
+//        primeState = PRIMESTATE.RESET;
+//        shouldPrime = false;
+//        isBusy = false;
+//        wasClockReset = false;
+//        shouldGrab = true;
+//        }
+//        }
+//        else if(shouldGrab){
+//        isBusy = true;
+//
+//        if(!wasClockReset){ //Reset the clock
+//        clock1.reset();
+//        wasClockReset = true;
+//        }
+//        /*----------*/
+//        //Should we close the gripper?
+//        if(grabState == GRABSTATE.GRAB && clock1.milliseconds() < 400 && wasClockReset){
+//        setIntakeGrippersPos(2); //close the gripper
+//        setOuttakePos(outtakeWristInPos, outtakeClawOpenPos); //Ensure the outtake is properly set up
+//        }
+//        else if(grabState == GRABSTATE.GRAB && clock1.milliseconds() > 400 && wasClockReset){
+//        grabState = GRABSTATE.RETRACT;
+//        wasClockReset = false;
+//        }
+//        /*----------*/
+//        //Should we retract the intake?
+//        if(grabState == GRABSTATE.RETRACT && drive.intakeSlide.getCurrentPosition() > transferPos){
+//        setIntakeWristPos(1);//Send wrist to a mid point
+//        setIntakeExtension(2, .5); //Pull back the intake
+//        }
+//        else if (grabState == GRABSTATE.RETRACT && drive.intakeSlide.getCurrentPosition() <= transferPos){
+//        grabState = GRABSTATE.PREPARE_TRANSFER;
+//        wasClockReset = false;
+//        clock1.reset();
+//        }
+//        /*----------*/
+//        //Should we prepare to transfer?
+//        if(grabState == GRABSTATE.PREPARE_TRANSFER && clock1.milliseconds() < 400 && wasClockReset){
+//        setIntakeWristPos(2); //Pull the wrist up
+//        }
+//        else if(grabState == GRABSTATE.PREPARE_TRANSFER && clock1.milliseconds() > 400 && wasClockReset){
+//        grabState = GRABSTATE.TRANSFER;
+//        wasClockReset = false;
+//        clock1.reset();
+//        }
+//        /*----------*/
+//        //Should we transfer?
+//        if(grabState == GRABSTATE.TRANSFER && clock1.milliseconds() < 400 && wasClockReset){
+//        setIntakeGrippersPos(0); //Open the grippers
+//        }
+//        else if(grabState == GRABSTATE.TRANSFER && clock1.milliseconds() > 400 && wasClockReset){
+//        grabState = GRABSTATE.LIFT;
+//        }
+//        /*----------*/
+//        //Should we lift up?
+//        if(grabState == GRABSTATE.LIFT && drive.lift.getCurrentPosition() < tempHeight){
+//        setIntakeWristPos(1);//Send wrist to a mid point
+//        setIntakeExtension(5, 1);
+//        setOuttakePos(outtakeWristOutPos, outtakeClawClosedPos);
+//        setIntakeGrippersPos(2); //Close the gripper
+//        setLiftTargetPosition(4, 1);
+//        }
+//        else if(grabState == GRABSTATE.LIFT && drive.lift.getCurrentPosition() >= tempHeight){
+//        grabState = GRABSTATE.GRAB;
+//        shouldGrab = false;
+//        wasClockReset = false;
+//        shouldDeliver = true;
+//        }
+//        }
+//        else if (shouldDeliver){
+//        isBusy = true;
+//
+//        if(!wasClockReset){ //Reset the clock
+//        clock1.reset();
+//        wasClockReset = true;
+//        }
+//        /*----------*/
+//        //Should we lift if this is the first delivery?
+//        if(deliveryState == DELIVERYSTATE.DELIVER && drive.lift.getCurrentPosition() < tempHeight && firstDelivery){
+//        setIntakeExtension(5, 1);
+//        setLiftTargetPosition(3, 1);
+//        }
+//        else if(deliveryState == DELIVERYSTATE.DELIVER && drive.lift.getCurrentPosition() >= tempHeight && firstDelivery){
+//        firstDelivery = false;
+//        wasClockReset = false;
+////                clock1.reset();
+//        }
+//        /*----------*/
+//        //Should we deliver the cone?
+//        if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() < 800 && wasClockReset && !firstDelivery){
+//        setIntakeExtension(5, 1);
+//        setIntakeGrippersPos(2);
+//        setOuttakePos(outtakeWristOutPos, outtakeClawOpenPos);
+////                setIntakeWristPos(0); //Lower the wrist
+//        }
+//        else if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() > 800 && wasClockReset && !firstDelivery){
+//        deliveryState = DELIVERYSTATE.RESET;
+//        }
+//        /*----------*/
+//        //Should we reset?
+//        if(deliveryState == DELIVERYSTATE.RESET && drive.lift.getCurrentPosition() > liftRestPosition){
+//        setLiftTargetPosition(0, 1); //Return the lift to rest position
+//
+//        setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
+//        setIntakeWristPos(0); //Lower the wrist
+//        setIntakeGrippersPos(2);
+//
+//        setIntakeExtension(3, 1); //Extend the intake
+//
+//        }
+//        else if(deliveryState == DELIVERYSTATE.RESET && drive.lift.getCurrentPosition() <= liftRestPosition){
+//        deliveryState = DELIVERYSTATE.DELIVER;
+//        shouldDeliver = false;
+//        wasClockReset = false;
+//        isBusy = false;
+//        }
+//        }
+//        else if (shouldPrepareDelivery){
+//        isBusy = true;
+//
+//        if(!wasClockReset){ //Reset the clock
+//        clock1.reset();
+//        wasClockReset = true;
+//        }
+//        /*----------*/
+//        //Should we prepare to transfer?
+//        if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() < 800 && wasClockReset){
+//        setIntakeWristPos(2); //Pull the wrist up
+//        setIntakeExtension(1, .7); //Pull back the intake
+//        }
+//        else if(deliveryState == DELIVERYSTATE.DELIVER && clock1.milliseconds() > 800 && wasClockReset){
+//        deliveryState = DELIVERYSTATE.RESET;
+//        wasClockReset = false;
+//        clock1.reset();
+//        }
+//        /*----------*/
+//        //Should we transfer?
+//        if(deliveryState == DELIVERYSTATE.RESET && clock1.milliseconds() < 400 && wasClockReset){
+//        setIntakeGrippersPos(0); //Open the grippers
+//
+//        }
+//        else if(deliveryState == DELIVERYSTATE.RESET && clock1.milliseconds() > 400 && wasClockReset){
+//        deliveryState = DELIVERYSTATE.DELIVER;
+////                setIntakeGrippersPos(2);
+//        setOuttakePos(outtakeWristInPos, outtakeClawClosedPos);
+//        shouldPrepareDelivery = false;
+//        isBusy = false;
+//        }
+//        }
+//        else if(shouldRest){
+//        setLiftTargetPosition(0, 1); //Return the lift to rest position
+//        setOuttakePos(outtakeWristInPos, outtakeClawOpenPos);
+//        setIntakeExtension(0, .5); //Pull back the intake
+//        setIntakeWristPos(1);
+//        setIntakeGrippersPos(0);
+//        shouldRest = false;
+//        }

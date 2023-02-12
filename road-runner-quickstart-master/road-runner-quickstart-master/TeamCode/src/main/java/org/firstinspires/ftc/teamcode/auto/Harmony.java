@@ -153,13 +153,12 @@ public class Harmony extends LinearOpMode {
         }
         telemetry.addData("Running...", "");
         telemetry.update();
-        //Set us up for this being the first delivery
-        symbiote.firstDelivery = true;
-        symbiote.sendStatusRequest(2);
+
+        symbiote.sendStatusRequest(0);
 
         clock1.reset();
         while(clock1.milliseconds() < 300 || (symbiote.isBusy() && opModeIsActive() && !isStopRequested())) {
-            symbiote.updateAutonomousHarpsichordSymbiote(0);
+            symbiote.updateAutonomousHarpsichordSymbiote(0, 2);
             drive.update();
             telemetry.addData("Prepping...", "First run");
             telemetry.update();
@@ -167,25 +166,28 @@ public class Harmony extends LinearOpMode {
         //Move to the junction
         drive.followTrajectory(goToJunction1);
         //Send the request to deliver
-        symbiote.sendStatusRequest(3);
+        symbiote.sendStatusRequest(1);
+        symbiote.setLiftTargetHeight(2);
         //Wait until the symbiont has finished, updating the whole time
         clock1.reset();
         while(clock1.milliseconds() < 300 || (symbiote.isBusy() && opModeIsActive() && !isStopRequested())) {
-            symbiote.updateAutonomousHarpsichordSymbiote(0);
+            symbiote.updateAutonomousHarpsichordSymbiote(0, 2);
             drive.update();
             telemetry.addData("Cycling...", "First run");
             telemetry.update();
         }
+        int stack = 5;
         //Cycle five times
-        for(int i = 5; i >= 0; i--){
+        while(stack > 0){
             telemetry.addData("True Cycling...", "");
             //Send the request to deliver
-            symbiote.sendStatusRequest(0);
+            symbiote.sendStatusRequest(3);
             //Wait until the symbiote has finished, updating the whole time
             clock1.reset();
             while(clock1.milliseconds() < 300 || (symbiote.isBusy() && opModeIsActive() && !isStopRequested())) {
-                symbiote.updateAutonomousHarpsichordSymbiote(i);
+                symbiote.updateAutonomousHarpsichordSymbiote(stack, 2);
             }
+            stack--;
         }
 
 
