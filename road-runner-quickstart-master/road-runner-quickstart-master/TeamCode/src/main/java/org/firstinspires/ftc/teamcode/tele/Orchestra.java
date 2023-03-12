@@ -61,7 +61,7 @@ public class Orchestra extends LinearOpMode {
 
             /** Update all symbiotes and drivers */
             drive.update();
-            Pose2d poseEstimate = drive.getPoseEstimate();
+//            Pose2d poseEstimate = drive.getPoseEstimate();
             symbiote.updateHarpsichordSymbiote();
 
 //            if(matchTimer.seconds() > 89){
@@ -81,53 +81,46 @@ public class Orchestra extends LinearOpMode {
                 speedMod = .25;
 
             //Manual
-            if(!automaticDriveMode)
-            {
                 drive.setWeightedDrivePower(
                         new Pose2d(
-                                gamepad1.left_stick_y * speedMod,
-                                gamepad1.left_stick_x * speedMod,
-                                gamepad1.right_stick_x * speedMod
+                                -gamepad1.left_stick_y * speedMod,
+                                -gamepad1.left_stick_x * speedMod,
+                                -gamepad1.right_stick_x * speedMod
 
                         )
                 );
-            }
+
 
 
             //Automatic lift Controls
-            if(automaticDriveMode)
-            {
-                coneOffset = combinedDetectorHandler.getForwardConeOffset(1) * -.005;
-                poleOffset = combinedDetectorHandler.getPoleParallax() * -.005;
-                if(testMode == 0){
-                    drive.setWeightedDrivePower(
-                            new Pose2d(
-                                    0,
-                                    0,
-                                    -drive.getRawExternalHeading()
-
-                            )
-                    );
-                }
-                else if(testMode == 1){
-
-                    drive.setWeightedDrivePower(
-                            new Pose2d(
-                                    0,
-                                    0,
-                                    coneOffset > -.1 && coneOffset < .1 ? 0 : coneOffset
-                            )
-                    );
-                }
-            }
+//            if(automaticDriveMode)
+//            {
+//                coneOffset = combinedDetectorHandler.getForwardConeOffset(1) * -.005;
+//                if(testMode == 0){
+//                    drive.setWeightedDrivePower(
+//                            new Pose2d(
+//                                    0,
+//                                    0,
+//                                    -drive.getRawExternalHeading()
+//
+//                            )
+//                    );
+//                }
+//                else if(testMode == 1){
+//
+//                    drive.setWeightedDrivePower(
+//                            new Pose2d(
+//                                    0,
+//                                    0,
+//                                    coneOffset > -.1 && coneOffset < .1 ? 0 : coneOffset
+//                            )
+//                    );
+//                }
+//            }
 
 
             /** Operator Controls */
             //Automatic lift Controls
-//            if(automaticMode)
-//            {
-//                symbiote.sendStatusRequest(0);
-//            }
 
             if(gamepad2.a && gamepad2.b){
                 symbiote.setLiftTargetHeight(1);
@@ -139,24 +132,22 @@ public class Orchestra extends LinearOpMode {
                 symbiote.setLiftTargetHeight(3);
             }
 
-            //Manual Lift Controls
-            if(!automaticMode){
-                if(gamepad2.dpad_up && !symbiote.isBusy())
+                if(gamepad2.dpad_up && !symbiote.isBusy()) {
                     symbiote.sendStatusRequest(0);
-
-                else if (gamepad2.dpad_right && !symbiote.isBusy())
+                }
+                else if (gamepad2.dpad_right && !symbiote.isBusy()) {
                     symbiote.sendStatusRequest(1);
-
+                }
                 else if (gamepad2.left_bumper && !symbiote.isBusy()){
                     symbiote.sendStatusRequest(2);
                 }
-                else if (gamepad2.right_bumper && !symbiote.isBusy()){
+                else if ((gamepad2.right_bumper || gamepad2.dpad_down) && !symbiote.isBusy()){
                     symbiote.sendStatusRequest(3);
                 }
 
                 else if(gamepad2.dpad_left && !symbiote.isBusy())
                     symbiote.sendStatusRequest(4);
-            }
+
 //            if(gamepad2.x && gamepad1.x && symbiote.readyFlag){
 //                drive.blinkInRear.setPattern(RevBlinkinLedDriver.BlinkinPattern.DARK_GREEN);
 //                symbiote = new OboeStandardSymbiote();
@@ -172,36 +163,37 @@ public class Orchestra extends LinearOpMode {
             //Automatic Lift Controls/Overrides
             if(gamepad2.a){
                 symbiote.cyclingMode = true;
-//                symbiote.setAutomaticMode(true);
-//                automaticMode = true;
             }
             else if(gamepad2.b){
                 symbiote.cyclingMode = false;
-//                symbiote.setAutomaticMode(false);
-//                automaticMode = false;
+            }
+            if(gamepad1.right_bumper){
+                drive.intakeSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+                drive.intakeSlide.setPower(0);
+            }
+            if(gamepad1.left_bumper){
+                drive.intakeSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                drive.intakeSlide.setTargetPosition(0);
+                drive.intakeSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                drive.intakeSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+                drive.intakeSlide.setPower(1);
             }
 
 
 
             /** Telemetry */
-            telemetry.addData("Cone Distance ", drive.forwardSensor.getDistance(DistanceUnit.INCH));
-            telemetry.addData("Intake Slide Current Pos ", drive.intakeSlide.getCurrentPosition());
+//            telemetry.addData("Cone Distance ", drive.forwardSensor.getDistance(DistanceUnit.INCH));
+//            telemetry.addData("Intake Slide Current Pos ", drive.intakeSlide.getCurrentPosition());
             telemetry.addData("Current Prime State ", symbiote.primeState);
             telemetry.addData("Current Grab State ", symbiote.grabState);
             telemetry.addData("Current Delivery State ", symbiote.deliveryState);
-//            telemetry.addData("Pole Parallax ", poleOffset);
-//            telemetry.addData("Pow ", coneOffset);
-//            telemetry.addData("front Cone ", combinedDetectorHandler.getForwardConeOffset(1));
-//            telemetry.addData("x", poseEstimate.getX());
-//            telemetry.addData("y", poseEstimate.getY());
-//            telemetry.addData("heading", poseEstimate.getHeading());
 
             telemetry.update();
 
-            if(isStopRequested()) {
-                drive.lift.setTargetPosition(0);
-                sleep(1000);
-            }
+//            if(isStopRequested()) {
+//                drive.lift.setTargetPosition(0);
+//                sleep(1000);
+//            }
         }
     }
 

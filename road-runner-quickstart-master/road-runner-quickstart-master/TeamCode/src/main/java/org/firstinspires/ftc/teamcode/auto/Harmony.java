@@ -28,19 +28,68 @@ import java.util.ArrayList;
 @Autonomous(group = "harmony")
 public class Harmony extends LinearOpMode {
 
+    OpenCvCamera camera;
+    AprilTagDetectionPipeline aprilTagDetectionPipeline;
+
+    // Lens intrinsics
+    // UNITS ARE PIXELS
+    // NOTE: this calibration is for the C920 webcam at 800x448.
+    // You will need to do your own calibration for other configurations!
+    double fx = 622.001;
+    double fy = 622.001;
+    double cx = 319.803;
+    double cy = 241.251;
+
+    // UNITS ARE METERS
+    double tagsize = 0.04445;
+
+//    int ID_TAG_OF_INTEREST = 0; // Tag ID 18 from the 36h11 family
+
+    AprilTagDetection tagOfInterest = null;
+
+    int tagOfInterestID = 0;
+
+    int LEFT = 0;
+    int MIDDLE = 1;
+    int RIGHT = 2;
+
+    static final double FEET_PER_METER = 3.28084;
+
     ElapsedTime clock1 = new ElapsedTime();
-    int aprilTagOuput;
-    int autoMode = 0;
+    ElapsedTime matchTimer = new ElapsedTime();
     //3 for high
     //2 for medium
+    int autoMode = 0;
+
 
 
     @Override
     public void runOpMode() throws InterruptedException {
 
+        //Set up Drive
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
         drive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        CombinedDetectorHandler vision = new CombinedDetectorHandler(hardwareMap, "webcam 1", "webcam 2", "webcam 3");
+
+        //Open Camera
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "webcam 1"), cameraMonitorViewId);
+        aprilTagDetectionPipeline = new AprilTagDetectionPipeline(tagsize, fx, fy, cx, cy);
+
+        camera.setPipeline(aprilTagDetectionPipeline);
+        camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
+        {
+            @Override
+            public void onOpened()
+            {
+                camera.startStreaming(640,480, OpenCvCameraRotation.UPRIGHT);
+            }
+
+            @Override
+            public void onError(int errorCode)
+            {
+
+            }
+        });
 
         //Set our alliance color
         boolean decision = false;
@@ -75,10 +124,12 @@ public class Harmony extends LinearOpMode {
             if(gamepad1.a || gamepad2.a){
                 decision = true;
                 Storage.setStartIndicator(StartPositions.AUDIENCE);
+                drive.blinkInRear.setPattern(RevBlinkinLedDriver.BlinkinPattern.DARK_GREEN);
             }
             else if (gamepad1.b || gamepad2.b){
                 decision = true;
                 Storage.setStartIndicator(StartPositions.AWAY);
+                drive.blinkInRear.setPattern(RevBlinkinLedDriver.BlinkinPattern.GOLD);
             }
         }
 
@@ -97,10 +148,12 @@ public class Harmony extends LinearOpMode {
             if(gamepad1.a || gamepad2.a){
                 decision = true;
                 autoMode = 3;
+                drive.blinkInRear.setPattern(RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_WHITE);
             }
             else if (gamepad1.b || gamepad2.b){
                 decision = true;
                 autoMode = 2;
+                drive.blinkInRear.setPattern(RevBlinkinLedDriver.BlinkinPattern.AQUA);
             }
         }
 
@@ -112,27 +165,51 @@ public class Harmony extends LinearOpMode {
         symbiote.setAutomaticMode(true);
         symbiote.setLiftTargetHeight(autoMode);
 
+
+
         //Initialize all trajectory holders
+        Trajectory moveToJunctionMid = null;
         Trajectory goToJunction1 = null;
-        Trajectory moveAcrossField = null;
-        Trajectory goToJunction2 = null;
+        Trajectory moveToMid = null;
+        Trajectory goToParkArea2 = null;
+        Trajectory goToParkArea3 = null;
+
 
         //********//
         switch(autoMode){
             case 2:
-                goToJunction1 = drive.trajectoryBuilder(Storage.getRealStartPos())
-                        .lineToLinearHeading(MedJunctionData.getData(1))
+                moveToJunctionMid = drive.trajectoryBuilder(Storage.getRealStartPos())
+                        .lineToLinearHeading(MedJunctionData.getData(1, 0))
                         .build();
-                moveAcrossField = drive.trajectoryBuilder(goToJunction1.end())
-                        .lineToLinearHeading(MedJunctionData.getData(2))
+
+                goToJunction1 = drive.trajectoryBuilder(moveToJunctionMid.end())
+                        .lineToLinearHeading(MedJunctionData.getData(2, 0))
                         .build();
-                goToJunction2 = drive.trajectoryBuilder(moveAcrossField.end())
-                        .lineToLinearHeading(MedJunctionData.getData(3))
+
+                moveToMid = drive.trajectoryBuilder(goToJunction1.end())
+                        .lineToLinearHeading(MedJunctionData.getData(3, 0))
+                        .build();
+
+                goToParkArea2 = drive.trajectoryBuilder(moveToMid.end())
+                        .lineToLinearHeading(MedJunctionData.getData(4, 0))
+                        .build();
+
+                goToParkArea3 = drive.trajectoryBuilder(moveToMid.end())
+                        .lineToLinearHeading(MedJunctionData.getData(5, 0))
                         .build();
                 break;
             case 3:
                 break;
         }
+
+        while(gamepad1.a != true && gamepad2.a != true){
+            telemetry.addData("Please insert cone", "...");
+            telemetry.addData("Press A to continue", ".");
+            telemetry.update();
+        }
+        drive.blinkInRear.setPattern(RevBlinkinLedDriver.BlinkinPattern.STROBE_GOLD);
+
+        drive.outtakeClaw.setPosition(0);//Close the outtakeclaw
 
 
         /*
@@ -141,37 +218,91 @@ public class Harmony extends LinearOpMode {
          */
         while (!isStarted() && !isStopRequested() && !opModeIsActive())
         {
-            telemetry.addData("Waiting for Start", "");
-            aprilTagOuput = vision.getAprilTagPipeOutput();
-            if(aprilTagOuput == 6){
-                telemetry.addData("No Tag Found", aprilTagOuput);
+            ArrayList<AprilTagDetection> currentDetections = aprilTagDetectionPipeline.getLatestDetections();
+
+            if(currentDetections.size() != 0)
+            {
+                boolean tagFound = false;
+
+                for(AprilTagDetection tag : currentDetections)
+                {
+                    if(tag.id == LEFT || tag.id == MIDDLE || tag.id == RIGHT)
+                    {
+                        tagOfInterest = tag;
+                        tagFound = true;
+                        break;
+                    }
+                }
+
+                if(tagFound)
+                {
+                    telemetry.addLine("Tag of interest is in sight!\n\nLocation data:");
+                    tagToTelemetry(tagOfInterest);
+                }
+                else
+                {
+                    telemetry.addLine("Don't see tag of interest :(");
+
+                    if(tagOfInterest == null)
+                    {
+                        telemetry.addLine("(The tag has never been seen)");
+                    }
+                    else
+                    {
+                        telemetry.addLine("\nBut we HAVE seen the tag before; last seen at:");
+                        tagToTelemetry(tagOfInterest);
+                    }
+                }
+
             }
-            else {
-                telemetry.addData("Tag Found! Tag ID: ", aprilTagOuput);
+            else
+            {
+                telemetry.addLine("Don't see tag of interest :(");
+
+                if(tagOfInterest == null)
+                {
+                    telemetry.addLine("(The tag has never been seen)");
+                }
+                else
+                {
+                    telemetry.addLine("\nBut we HAVE seen the tag before; last seen at:");
+                    tagToTelemetry(tagOfInterest);
+                }
+
             }
+
+            telemetry.update();
+            sleep(20);
+        }
+
+        /* Update the telemetry, and finalize the april tag snapshot */
+        if(tagOfInterest != null)
+        {
+            telemetry.addLine("Tag snapshot:\n");
+            tagToTelemetry(tagOfInterest);
             telemetry.update();
         }
+        else
+        {
+            telemetry.addLine("No tag snapshot available, it was never sighted during the init loop :(");
+            telemetry.update();
+        }
+
+        matchTimer.reset();
         telemetry.addData("Running...", "");
         telemetry.update();
 
-        symbiote.sendStatusRequest(0);
-
-        clock1.reset();
-        while(clock1.milliseconds() < 300 || (symbiote.isBusy() && opModeIsActive() && !isStopRequested())) {
-            symbiote.updateAutonomousHarpsichordSymbiote(0, 2);
-            drive.update();
-            telemetry.addData("Prepping...", "First run");
-            telemetry.update();
-        }
         //Move to the junction
+        drive.followTrajectory(moveToJunctionMid);
         drive.followTrajectory(goToJunction1);
+
         //Send the request to deliver
         symbiote.sendStatusRequest(1);
         symbiote.setLiftTargetHeight(2);
         //Wait until the symbiont has finished, updating the whole time
         clock1.reset();
         while(clock1.milliseconds() < 300 || (symbiote.isBusy() && opModeIsActive() && !isStopRequested())) {
-            symbiote.updateAutonomousHarpsichordSymbiote(0, 2);
+            symbiote.updateAutonomousHarpsichordSymbiote(5, 2);
             drive.update();
             telemetry.addData("Cycling...", "First run");
             telemetry.update();
@@ -179,7 +310,7 @@ public class Harmony extends LinearOpMode {
         int stack = 5;
         //Cycle five times
         while(stack > 0){
-            telemetry.addData("True Cycling...", "");
+            telemetry.addData("True Cycling...", stack);
             //Send the request to deliver
             symbiote.sendStatusRequest(3);
             //Wait until the symbiote has finished, updating the whole time
@@ -189,8 +320,35 @@ public class Harmony extends LinearOpMode {
             }
             stack--;
         }
+        symbiote.sendStatusRequest(4);
+        symbiote.updateAutonomousHarpsichordSymbiote(0, 0);
+        drive.followTrajectory(moveToMid);
+        //Move to the final parking location if it is not the center
+        if(tagOfInterest.id == LEFT){
+            drive.followTrajectory(goToParkArea3);
+        }
+        else if(tagOfInterest.id == RIGHT){
+            drive.followTrajectory(goToParkArea2);
+        }
+
+        Storage.setCurrentPos(drive.getPoseEstimate());
+
+        telemetry.addData("Match Time: ", matchTimer.milliseconds());
+        telemetry.update();
+        sleep(15000);
 
 
+    }
+
+    void tagToTelemetry(AprilTagDetection detection)
+    {
+        telemetry.addLine(String.format("\nDetected tag ID=%d", detection.id));
+        telemetry.addLine(String.format("Translation X: %.2f feet", detection.pose.x*FEET_PER_METER));
+        telemetry.addLine(String.format("Translation Y: %.2f feet", detection.pose.y*FEET_PER_METER));
+        telemetry.addLine(String.format("Translation Z: %.2f feet", detection.pose.z*FEET_PER_METER));
+        telemetry.addLine(String.format("Rotation Yaw: %.2f degrees", Math.toDegrees(detection.pose.yaw)));
+        telemetry.addLine(String.format("Rotation Pitch: %.2f degrees", Math.toDegrees(detection.pose.pitch)));
+        telemetry.addLine(String.format("Rotation Roll: %.2f degrees", Math.toDegrees(detection.pose.roll)));
     }
 
 }

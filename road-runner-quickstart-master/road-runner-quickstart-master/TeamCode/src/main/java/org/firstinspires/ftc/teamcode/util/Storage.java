@@ -11,18 +11,22 @@ public class Storage {
 
     static StartPositions start = StartPositions.NONE;
 
-    static Pose2d startPosAudienceBlue = new Pose2d(35, 60, Math.toRadians(-90));
+    static Pose2d startPosAudienceBlue = new Pose2d(-35, 60, Math.toRadians(-90)); //READY
 
-    static Pose2d startPosAudienceRed = new Pose2d(-35, -60, Math.toRadians(90));
+    static Pose2d startPosAudienceRed = new Pose2d(-35, -60, Math.toRadians(90)); //READY
 
-    static Pose2d startPosAwayBlue = new Pose2d(35, -60, Math.toRadians(0));
+    static Pose2d startPosAwayBlue = new Pose2d(35, 60, Math.toRadians(-90)); //READY
 
-    static Pose2d startPosAwayRed = new Pose2d(35, -60, Math.toRadians(0));
+    static Pose2d startPosAwayRed = new Pose2d(35, -60, Math.toRadians(90)); //READY
 
     static Pose2d currentPos = new Pose2d(0, 0, Math.toRadians(0));
 
     public static Pose2d getCurrentPos(){
         return currentPos;
+    }
+
+    public static void setCurrentPos(Pose2d temp){
+        currentPos = temp;
     }
 
 
